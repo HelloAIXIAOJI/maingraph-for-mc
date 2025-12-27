@@ -1,0 +1,13 @@
+{
+  "itemGroup.mgmc": "Example Mod Tab",
+  "block.mgmc.example_block": "Example Block",
+  "item.mgmc.example_item": "Example Item",
+
+  "mgmc.configuration.title": "Maingraph for MC Configs",
+  "mgmc.configuration.section.mgmc.common.toml": "Maingraph for MC Configs",
+  "mgmc.configuration.section.mgmc.common.toml.title": "Maingraph for MC Configs",
+  "mgmc.configuration.items": "Item List",
+  "mgmc.configuration.logDirtBlock": "Log Dirt Block",
+  "mgmc.configuration.magicNumberIntroduction": "Magic Number Text",
+  "mgmc.configuration.magicNumber": "Magic Number"
+}
