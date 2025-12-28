@@ -19,7 +19,10 @@ const translations = {
         },
         "nodes": {
             "on_called": { title: "On Called", label: "On Called" },
+            "on_mgrun": { title: "On MGRUN", label: "On MGRUN" },
             "print_string": { title: "Print String", label: "Print String" },
+            "print_chat": { title: "Print to Chat", label: "Print to Chat" },
+            "get_arg": { title: "Get Parameter", label: "Get Parameter" },
             "player_health": { title: "Player Health", label: "Player Health" },
             "add_float": { title: "Add", label: "Add (Float)" },
             "branch": { title: "Branch", label: "Branch" },
@@ -28,6 +31,9 @@ const translations = {
         "pins": {
             "exec": "Exec",
             "in_string": "In String",
+            "message": "Message",
+            "index": "Index",
+            "name": "Name",
             "value": "Value",
             "a": "A",
             "b": "B",
@@ -59,7 +65,10 @@ const translations = {
         },
         "nodes": {
             "on_called": { title: "事件 被调用时", label: "被调用时" },
+            "on_mgrun": { title: "事件 当运行MGRUN时", label: "当运行MGRUN时" },
             "print_string": { title: "打印字符串", label: "打印字符串" },
+            "print_chat": { title: "输出到聊天", label: "输出到聊天" },
+            "get_arg": { title: "获取参数", label: "获取参数" },
             "player_health": { title: "玩家生命值", label: "玩家生命值" },
             "add_float": { title: "加法", label: "加法 (浮点)" },
             "branch": { title: "分支", label: "分支" },
@@ -68,6 +77,9 @@ const translations = {
         "pins": {
             "exec": "执行",
             "in_string": "输入字符串",
+            "message": "内容",
+            "index": "索引",
+            "name": "名称",
             "value": "值",
             "a": "A",
             "b": "B",
@@ -168,40 +180,39 @@ function updateVisibleNodes() {
 // Node Definitions
 const nodeDefinitions = [
     {
-        id: 'on_called',
+        id: 'on_mgrun',
         category: 'Events',
-        label: 'On Called',
-        title: 'On Called',
+        label: 'On MGRUN',
+        title: 'On MGRUN',
         color: '#800',
         inputs: [],
-        outputs: [{id: 'exec', label: 'Exec', type: 'exec'}]
+        outputs: [
+            {id: 'exec', label: 'Exec', type: 'exec'},
+            {id: 'name', label: 'Name', type: 'string'}
+        ]
     },
     {
-        id: 'print_string',
+        id: 'print_chat',
         category: 'Function',
-        label: 'Print String',
-        title: 'Print String',
+        label: 'Print to Chat',
+        title: 'Print to Chat',
         color: '#48f',
-        inputs: [{id: 'exec', label: 'Exec', type: 'exec'}, {id: 'in_string', label: 'In String', type: 'string', hasInput: true, defaultValue: 'Hello World'}],
+        inputs: [
+            {id: 'exec', label: 'Exec', type: 'exec'},
+            {id: 'message', label: 'Message', type: 'string', hasInput: true, defaultValue: 'Hello Chat'}
+        ],
         outputs: [{id: 'exec', label: 'Exec', type: 'exec'}]
     },
     {
-        id: 'player_health',
-        category: 'Variables',
-        label: 'Player Health',
-        title: 'Player Health',
+        id: 'get_arg',
+        category: 'Function',
+        label: 'Get Parameter',
+        title: 'Get Parameter',
         color: '#4d4',
-        inputs: [],
-        outputs: [{id: 'value', label: 'Value', type: 'float'}]
-    },
-    {
-        id: 'add_float',
-        category: 'Math',
-        label: 'Add (Float)',
-        title: 'Add',
-        color: '#4aa',
-        inputs: [{id: 'a', label: 'A', type: 'float', hasInput: true, defaultValue: 0}, {id: 'b', label: 'B', type: 'float', hasInput: true, defaultValue: 0}],
-        outputs: [{id: 'result', label: 'Result', type: 'float'}]
+        inputs: [
+            {id: 'index', label: 'Index', type: 'number', hasInput: true, defaultValue: 0}
+        ],
+        outputs: [{id: 'value', label: 'Value', type: 'string'}]
     },
     {
         id: 'branch',
@@ -211,17 +222,6 @@ const nodeDefinitions = [
         color: '#888',
         inputs: [{id: 'exec', label: 'Exec', type: 'exec'}, {id: 'condition', label: 'Condition', type: 'boolean', hasInput: true, defaultValue: true}],
         outputs: [{id: 'true', label: 'True', type: 'exec'}, {id: 'false', label: 'False', type: 'exec'}]
-    },
-    {
-        id: 'make_color',
-        category: 'Appearance',
-        label: 'Make Color',
-        title: 'Make Color',
-        color: '#c0c',
-        inputs: [
-            {id: 'base', label: 'Base', type: 'object', hasInput: true, inputType: 'color', defaultValue: '#ff0000'}
-        ],
-        outputs: [{id: 'color', label: 'Color', type: 'object'}]
     }
 ];
 
@@ -743,8 +743,10 @@ function getParsedNodes() {
 async function saveToMinecraft() {
     const btn = document.getElementById('btn-save');
     btn.classList.add('loading');
+    
     const data = {
-        raw: {
+        execution: getParsedNodes(),
+        ui: {
             nodes: nodes.map(n => ({
                 id: n.id,
                 defId: n.defId,
@@ -758,9 +760,9 @@ async function saveToMinecraft() {
                 toNode: c.toNode,
                 toSocket: c.toSocket
             }))
-        },
-        parsed: getParsedNodes()
+        }
     };
+
     try {
         const response = await fetch('/api/save', {
             method: 'POST',
@@ -780,38 +782,29 @@ async function saveToMinecraft() {
     }
 }
 
-function showToast(message, isError = false) {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.classList.toggle('error', isError);
-    toast.classList.add('show');
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
-}
-
 async function loadFromMinecraft() {
     try {
         const response = await fetch('/api/load');
         const data = await response.json();
         
         // Update Info Panel Path
-        if (data.path) {
-            document.getElementById('info-path').textContent = data.path;
+        if (data.metadata && data.metadata.savePath) {
+            document.getElementById('info-path').textContent = data.metadata.savePath;
         }
 
         // Update Info Panel Player
-        if (data.player) {
-            document.getElementById('info-player').textContent = data.player.name;
-            document.getElementById('info-player').title = `UUID: ${data.player.uuid}`;
+        if (data.metadata && data.metadata.playerName) {
+            document.getElementById('info-player').textContent = data.metadata.playerName;
+            document.getElementById('info-player').title = `UUID: ${data.metadata.playerUuid}`;
         }
 
-        if (data.raw) {
+        if (data.ui) {
             nodes.forEach(n => unmountNode(n));
             nodes = [];
             connections.forEach(c => c.path.remove());
             connections = [];
-            data.raw.nodes.forEach(n => {
+            
+            data.ui.nodes.forEach(n => {
                 const def = nodeDefinitions.find(d => d.id === n.defId);
                 if (!def) return;
                 const id = n.id;
@@ -821,7 +814,8 @@ async function loadFromMinecraft() {
                 nodes.push(nodeData);
                 mountNode(nodeData);
             });
-            data.raw.connections.forEach(c => {
+            
+            data.ui.connections.forEach(c => {
                 const sourceNode = document.getElementById(c.fromNode);
                 const targetNode = document.getElementById(c.toNode);
                 if (sourceNode && targetNode) {
@@ -835,7 +829,9 @@ async function loadFromMinecraft() {
             renderMinimap();
             updateTransform();
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error('Failed to load blueprint:', e);
+    }
 }
 
 window.addEventListener('load', loadFromMinecraft);

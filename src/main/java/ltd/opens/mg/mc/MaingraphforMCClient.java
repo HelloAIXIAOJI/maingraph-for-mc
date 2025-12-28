@@ -12,6 +12,9 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import ltd.opens.mg.mc.client.gui.BlueprintScreen;
 import ltd.opens.mg.mc.client.gui.BlueprintWebServer;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import net.minecraft.network.chat.Component;
+import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 import java.awt.Desktop;
@@ -62,6 +65,27 @@ public class MaingraphforMCClient {
                         }
                         return 1;
                     })
+            )
+        );
+
+        event.getDispatcher().register(literal("mgrun")
+            .then(argument("name", StringArgumentType.string())
+                .then(argument("args", StringArgumentType.greedyString())
+                    .executes(context -> {
+                        String name = StringArgumentType.getString(context, "name");
+                        String argsStr = StringArgumentType.getString(context, "args");
+                        String[] args = argsStr.split("\\s+");
+                        // Trigger execution engine
+                        BlueprintWebServer.executeBlueprint("on_mgrun", name, args);
+                        return 1;
+                    })
+                )
+                .executes(context -> {
+                    String name = StringArgumentType.getString(context, "name");
+                    // Trigger execution engine with no args
+                    BlueprintWebServer.executeBlueprint("on_mgrun", name, new String[0]);
+                    return 1;
+                })
             )
         );
     }

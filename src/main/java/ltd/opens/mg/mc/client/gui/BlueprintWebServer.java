@@ -87,15 +87,22 @@ public class BlueprintWebServer {
             }
         } else if (path.equals("/api/load") && "GET".equalsIgnoreCase(exchange.getRequestMethod())) {
             MaingraphforMC.LOGGER.info("Loading blueprint data");
-            String responseJson = String.format("{\"path\":\"%s\",\"raw\":%s}", 
-                dataFile.toAbsolutePath().toString().replace("\\", "/"), 
-                lastSavedJson.contains("\"raw\"") ? lastSavedJson.substring(lastSavedJson.indexOf("\"raw\"") + 6, lastSavedJson.length() - 1) : lastSavedJson);
             
-            // Simpler approach if lastSavedJson is already a full object
+            // Cleanly inject metadata into the saved JSON
+            String metadataJson = String.format(
+                "\"metadata\":{\"playerName\":\"%s\",\"playerUuid\":\"%s\",\"savePath\":\"%s\"}",
+                playerName,
+                playerUuid,
+                dataFile.toAbsolutePath().toString().replace("\\", "/")
+            );
+
+            String responseJson;
             if (lastSavedJson.trim().startsWith("{")) {
-                responseJson = lastSavedJson.substring(0, lastSavedJson.lastIndexOf("}")) + 
-                    ",\"path\":\"" + dataFile.toAbsolutePath().toString().replace("\\", "/") + "\"" +
-                    ",\"player\":{\"name\":\"" + playerName + "\",\"uuid\":\"" + playerUuid + "\"}}";
+                // If it's already an object, insert metadata at the start
+                responseJson = "{" + metadataJson + "," + lastSavedJson.substring(1);
+            } else {
+                // Fallback for empty/invalid file
+                responseJson = "{" + metadataJson + "}";
             }
             
             sendJsonResponse(exchange, 200, responseJson);
@@ -156,5 +163,11 @@ public class BlueprintWebServer {
 
     public static String getUrl() {
         return "http://localhost:" + port + "/blueprint.html";
+    }
+
+    public static void executeBlueprint(String eventType, String name, String[] args) {
+        if (lastSavedJson != null && !lastSavedJson.isEmpty()) {
+            BlueprintEngine.execute(lastSavedJson, eventType, name, args);
+        }
     }
 }
