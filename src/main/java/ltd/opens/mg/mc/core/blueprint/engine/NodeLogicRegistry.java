@@ -80,7 +80,7 @@ public class NodeLogicRegistry {
         // Functions
         register("print_chat", new PrintChatHandler());
         register("print_string", new PrintStringHandler());
-        register("get_arg", new GetArgHandler());
+        register("get_list_item", new GetListItemHandler());
 
         // Logic
         register("branch", new BranchHandler());

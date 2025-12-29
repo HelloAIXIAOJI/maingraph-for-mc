@@ -57,6 +57,6 @@ public record NodeDefinition(
     public record PortDefinition(String name, PortType type, int color, boolean hasInput, Object defaultValue) {}
 
     public enum PortType {
-        EXEC, STRING, FLOAT, BOOLEAN, OBJECT
+        EXEC, STRING, FLOAT, BOOLEAN, OBJECT, LIST
     }
 }

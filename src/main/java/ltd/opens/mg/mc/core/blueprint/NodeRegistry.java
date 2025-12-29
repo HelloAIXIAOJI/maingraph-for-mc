@@ -26,6 +26,7 @@ public class NodeRegistry {
         int colorFloat = 0xFF36CF36;
         int colorBoolean = 0xFF920101;
         int colorObject = 0xFF00AAFF;
+        int colorList = 0xFFFFCC00; // Yellow-ish for List
 
         // Register default nodes matching web editor
         // Events
@@ -34,6 +35,7 @@ public class NodeRegistry {
             .color(0xFF880000)
             .addOutput("exec", NodeDefinition.PortType.EXEC, colorExec)
             .addOutput("name", NodeDefinition.PortType.STRING, colorString)
+            .addOutput("parameters", NodeDefinition.PortType.LIST, colorList)
             .build());
 
         // Function
@@ -45,9 +47,10 @@ public class NodeRegistry {
             .addOutput("exec", NodeDefinition.PortType.EXEC, colorExec)
             .build());
 
-        register(new NodeDefinition.Builder("get_arg", "Get Parameter")
+        register(new NodeDefinition.Builder("get_list_item", "Get List Item")
             .category("Function")
             .color(0xFF44AA44)
+            .addInput("list", NodeDefinition.PortType.LIST, colorList)
             .addInput("index", NodeDefinition.PortType.FLOAT, colorFloat, true, 0)
             .addOutput("value", NodeDefinition.PortType.STRING, colorString)
             .build());
