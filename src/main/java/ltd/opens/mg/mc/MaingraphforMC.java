@@ -32,8 +32,6 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import ltd.opens.mg.mc.client.gui.BlueprintWebServer;
-
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -119,16 +117,10 @@ public class MaingraphforMC {
     public void onServerStarting(ServerStartingEvent event) {
         // Do something when the server starts
         LOGGER.info("HELLO from server starting");
-        
-        // Set the blueprint save path to the world directory
-        Path worldPath = event.getServer().getWorldPath(LevelResource.ROOT);
-        BlueprintWebServer.setSavePath(worldPath);
     }
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
-        LOGGER.info("Server stopping, resetting blueprint save path");
-        // Reset to default root path when server stops
-        BlueprintWebServer.setSavePath(Paths.get("."));
+        LOGGER.info("Server stopping");
     }
 }

@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import ltd.opens.mg.mc.MaingraphforMC;
+import ltd.opens.mg.mc.MaingraphforMCClient;
 import ltd.opens.mg.mc.core.blueprint.NodeDefinition;
 import ltd.opens.mg.mc.core.blueprint.NodeRegistry;
 import net.minecraft.client.input.KeyEvent;
@@ -15,6 +16,7 @@ import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -22,6 +24,8 @@ import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +34,7 @@ import java.util.UUID;
 
 public class BlueprintScreen extends Screen {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private final Path dataFile;
     private float panX = 0;
     private float panY = 0;
     private float zoom = 1.0f;
@@ -57,6 +62,7 @@ public class BlueprintScreen extends Screen {
 
     public BlueprintScreen() {
         super(Component.literal("Blueprint Editor"));
+        this.dataFile = MaingraphforMCClient.getBlueprintPath();
         load();
     }
 
@@ -75,8 +81,51 @@ public class BlueprintScreen extends Screen {
     private void save() {
         try {
             JsonObject root = new JsonObject();
-            JsonObject ui = new JsonObject();
             
+            // Execution data for BlueprintEngine
+            JsonArray execution = new JsonArray();
+            for (GuiNode node : nodes) {
+                JsonObject nodeObj = new JsonObject();
+                nodeObj.addProperty("id", node.id);
+                nodeObj.addProperty("type", node.typeId);
+                
+                JsonObject inputs = new JsonObject();
+                for (NodeDefinition.PortDefinition port : node.definition.inputs()) {
+                    GuiConnection conn = findConnectionTo(node, port.name());
+                    JsonObject input = new JsonObject();
+                    if (conn != null) {
+                        input.addProperty("type", "link");
+                        input.addProperty("nodeId", conn.from.id);
+                        input.addProperty("socket", conn.fromPort);
+                    } else {
+                        input.addProperty("type", "value");
+                        JsonElement val = node.inputValues.get(port.name());
+                        input.add("value", val != null ? val : GSON.toJsonTree(port.defaultValue()));
+                    }
+                    inputs.add(port.name(), input);
+                }
+                nodeObj.add("inputs", inputs);
+
+                JsonObject outputs = new JsonObject();
+                for (NodeDefinition.PortDefinition port : node.definition.outputs()) {
+                    JsonArray targets = new JsonArray();
+                    for (GuiConnection conn : connections) {
+                        if (conn.from == node && conn.fromPort.equals(port.name())) {
+                            JsonObject target = new JsonObject();
+                            target.addProperty("nodeId", conn.to.id);
+                            target.addProperty("socket", conn.toPort);
+                            targets.add(target);
+                        }
+                    }
+                    outputs.add(port.name(), targets);
+                }
+                nodeObj.add("outputs", outputs);
+                execution.add(nodeObj);
+            }
+            root.add("execution", execution);
+
+            // UI data for restoration
+            JsonObject ui = new JsonObject();
             JsonArray nodesArray = new JsonArray();
             for (GuiNode node : nodes) {
                 JsonObject nodeObj = new JsonObject();
@@ -102,16 +151,26 @@ public class BlueprintScreen extends Screen {
             root.add("ui", ui);
 
             String json = new GsonBuilder().setPrettyPrinting().create().toJson(root);
-            BlueprintWebServer.save(json);
-            MaingraphforMC.LOGGER.info("Saved blueprint via WebServer");
+            Files.writeString(this.dataFile, json);
+            MaingraphforMC.LOGGER.info("Saved blueprint to {}", this.dataFile.toAbsolutePath());
         } catch (Exception e) {
             MaingraphforMC.LOGGER.error("Failed to save blueprint", e);
         }
     }
 
+    private GuiConnection findConnectionTo(GuiNode node, String portName) {
+        for (GuiConnection conn : connections) {
+            if (conn.to == node && conn.toPort.equals(portName)) {
+                return conn;
+            }
+        }
+        return null;
+    }
+
     private void load() {
         try {
-            String json = BlueprintWebServer.load();
+            if (!Files.exists(this.dataFile)) return;
+            String json = Files.readString(this.dataFile);
             if (json == null || json.isEmpty()) return;
             JsonObject root = JsonParser.parseString(json).getAsJsonObject();
             
@@ -402,48 +461,12 @@ public class BlueprintScreen extends Screen {
 
     @Override
     public boolean charTyped(CharacterEvent event) {
-        if (focusedNode != null && focusedPort != null) {
-            GuiNode.NodePort port = focusedNode.getPortByName(focusedPort, true);
-            if (port != null) {
-                char cp = (char) event.codepoint();
-                // If FLOAT, only allow digits and one dot
-                if (port.type == NodeDefinition.PortType.FLOAT) {
-                    if (!Character.isDigit(cp) && cp != '.') return false;
-                    
-                    JsonElement val = focusedNode.inputValues.get(focusedPort);
-                    String current = val != null ? val.getAsString() : "";
-                    if (cp == '.' && current.contains(".")) return false;
-                }
-                
-                JsonElement val = focusedNode.inputValues.get(focusedPort);
-                String current = val != null ? val.getAsString() : "";
-                focusedNode.inputValues.addProperty(focusedPort, current + cp);
-                return true;
-            }
-        }
         return super.charTyped(event);
     }
 
     @Override
     public boolean keyPressed(KeyEvent event) {
         int keyCode = event.key();
-        
-        if (focusedNode != null && focusedPort != null) {
-            if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-                JsonElement val = focusedNode.inputValues.get(focusedPort);
-                String current = val != null ? val.getAsString() : "";
-                if (!current.isEmpty()) {
-                    focusedNode.inputValues.addProperty(focusedPort, current.substring(0, current.length() - 1));
-                }
-                return true;
-            } else if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                focusedNode = null;
-                focusedPort = null;
-                return true;
-            }
-            // If focused on input, don't propagate other keys (except maybe Ctrl+C/V later)
-            return true;
-        }
 
         if (keyCode == GLFW.GLFW_KEY_DELETE || keyCode == GLFW.GLFW_KEY_BACKSPACE) {
             // Delete selected node (last one mouse was over)
@@ -463,6 +486,10 @@ public class BlueprintScreen extends Screen {
             }
             
             if (toRemove != null) {
+                if (focusedNode == toRemove) {
+                    focusedNode = null;
+                    focusedPort = null;
+                }
                 final GuiNode finalToRemove = toRemove;
                 nodes.remove(toRemove);
                 connections.removeIf(c -> c.from == finalToRemove || c.to == finalToRemove);
@@ -488,6 +515,10 @@ public class BlueprintScreen extends Screen {
             // Delete Node
             if (mouseX >= x && mouseX <= x + width && mouseY >= y + 5 && mouseY <= y + 20) {
                 if (contextMenuNode != null) {
+                    if (focusedNode == contextMenuNode) {
+                        focusedNode = null;
+                        focusedPort = null;
+                    }
                     final GuiNode finalNode = contextMenuNode;
                     nodes.remove(contextMenuNode);
                     connections.removeIf(c -> c.from == finalNode || c.to == finalNode);
@@ -626,8 +657,23 @@ public class BlueprintScreen extends Screen {
                                     boolean current = val != null ? val.getAsBoolean() : (port.defaultValue instanceof Boolean ? (Boolean) port.defaultValue : false);
                                     node.inputValues.addProperty(port.name, !current);
                                 } else {
-                                    focusedNode = node;
-                                    focusedPort = port.name;
+                                    // Open separate input modal
+                                    JsonElement val = node.inputValues.get(port.name);
+                                    String initialText = val != null ? val.getAsString() : (port.defaultValue != null ? port.defaultValue.toString() : "");
+                                    boolean isNumeric = (port.type == NodeDefinition.PortType.FLOAT);
+                                    
+                                    final GuiNode targetNode = node;
+                                    final String targetPort = port.name;
+                                    
+                                    Minecraft.getInstance().setScreen(new InputModalScreen(
+                                        this, 
+                                        "Enter " + port.name, 
+                                        initialText, 
+                                        isNumeric,
+                                        (newText) -> {
+                                            targetNode.inputValues.addProperty(targetPort, newText);
+                                        }
+                                    ));
                                 }
                                 return true;
                             }
@@ -772,6 +818,7 @@ public class BlueprintScreen extends Screen {
     private class GuiNode {
         String id;
         String typeId;
+        NodeDefinition definition;
         String title;
         float x, y;
         int color;
@@ -783,9 +830,12 @@ public class BlueprintScreen extends Screen {
         List<NodePort> inputs = new ArrayList<>();
         List<NodePort> outputs = new ArrayList<>();
 
+        private boolean sizeDirty = true;
+
         public GuiNode(NodeDefinition def, float x, float y) {
             this.id = UUID.randomUUID().toString();
             this.typeId = def.id();
+            this.definition = def;
             this.title = def.name();
             this.x = x;
             this.y = y;
@@ -801,17 +851,40 @@ public class BlueprintScreen extends Screen {
 
         public void addInput(String name, NodeDefinition.PortType type, int color, boolean hasInput, Object defaultValue) {
             inputs.add(new NodePort(name, type, color, true, hasInput, defaultValue));
-            updateHeight();
+            sizeDirty = true;
         }
 
         public void addOutput(String name, NodeDefinition.PortType type, int color) {
             outputs.add(new NodePort(name, type, color, false, false, null));
-            updateHeight();
+            sizeDirty = true;
         }
 
-        private void updateHeight() {
+        private void updateSize(net.minecraft.client.gui.Font font) {
+            // Calculate height
             int maxPorts = Math.max(inputs.size(), outputs.size());
-            this.height = Math.max(40, headerHeight + 10 + maxPorts * 15);
+            this.height = Math.max(40, headerHeight + 10 + maxPorts * 15 + 5);
+
+            // Calculate width
+            float minWidth = 100;
+            float titleW = font.width(title) + 20;
+
+            float maxInputW = 0;
+            for (NodePort p : inputs) {
+                float w = 10 + font.width(p.name);
+                if (p.hasInput) {
+                    w += 55; // Space for input field
+                }
+                maxInputW = Math.max(maxInputW, w);
+            }
+
+            float maxOutputW = 0;
+            for (NodePort p : outputs) {
+                float w = 10 + font.width(p.name);
+                maxOutputW = Math.max(maxOutputW, w);
+            }
+
+            this.width = Math.max(minWidth, Math.max(titleW, maxInputW + maxOutputW + 20));
+            sizeDirty = false;
         }
 
         public float[] getPortPositionByName(String name, boolean isInput) {
@@ -839,6 +912,9 @@ public class BlueprintScreen extends Screen {
         }
 
         public void render(GuiGraphics guiGraphics, net.minecraft.client.gui.Font font, int mouseX, int mouseY, float panX, float panY, float zoom, List<GuiConnection> connections) {
+            if (sizeDirty) {
+                updateSize(font);
+            }
             // Shadow
             guiGraphics.fill((int) x + 2, (int) y + 2, (int) (x + width + 2), (int) (y + height + 2), 0x88000000);
             
@@ -939,22 +1015,13 @@ public class BlueprintScreen extends Screen {
                     } else {
                         // Border if focused
                         boolean isFocused = focusedNode == this && focusedPort.equals(port.name);
-                        if (isFocused) {
-                            guiGraphics.renderOutline((int)inputX, (int)inputY, (int)inputWidth, (int)inputHeight, 0xFFFFFFFF);
-                        } else {
-                            guiGraphics.renderOutline((int)inputX, (int)inputY, (int)inputWidth, (int)inputHeight, 0x33FFFFFF);
-                        }
+                        guiGraphics.renderOutline((int)inputX, (int)inputY, (int)inputWidth, (int)inputHeight, 0x33FFFFFF);
                         
                         // Text
                         JsonElement val = inputValues.get(port.name);
                         String text = val != null ? val.getAsString() : (port.defaultValue != null ? port.defaultValue.toString() : "");
                         
-                        // Draw text with cursor if focused
                         String renderText = text;
-                        if (isFocused && (cursorTick / 10) % 2 == 0) {
-                            renderText += "_";
-                        }
-                        
                         // Truncate text if too long
                         if (font.width(renderText) > inputWidth - 4) {
                             renderText = "..." + font.plainSubstrByWidth(renderText, (int)inputWidth - 10, true);
