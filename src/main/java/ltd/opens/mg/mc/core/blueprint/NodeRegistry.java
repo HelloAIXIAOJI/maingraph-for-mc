@@ -28,6 +28,7 @@ public class NodeRegistry {
         int colorObject = 0xFF00AAFF;
         int colorList = 0xFFFFCC00; // Yellow-ish for List
         int colorUUID = 0xFF55FF55; // Light Green for UUID
+        int colorEnum = 0xFFFFAA00; // Orange for Enum
 
         // Register default nodes matching web editor
         // Events
@@ -66,7 +67,8 @@ public class NodeRegistry {
             .color(0xFF44AA44)
             .addInput("uuid", NodeDefinition.PortType.UUID, colorUUID)
             .addOutput("name", NodeDefinition.PortType.STRING, colorString)
-            .addOutput("type", NodeDefinition.PortType.STRING, colorString)
+            .addOutput("type", NodeDefinition.PortType.ENUM, colorEnum)
+            .addOutput("registry_name", NodeDefinition.PortType.STRING, colorString)
             .addOutput("pos_x", NodeDefinition.PortType.FLOAT, colorFloat)
             .addOutput("pos_y", NodeDefinition.PortType.FLOAT, colorFloat)
             .addOutput("pos_z", NodeDefinition.PortType.FLOAT, colorFloat)

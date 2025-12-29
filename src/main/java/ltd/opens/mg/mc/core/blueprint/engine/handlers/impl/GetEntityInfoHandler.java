@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.registries.BuiltInRegistries;
 import java.util.UUID;
 
 public class GetEntityInfoHandler implements NodeHandler {
@@ -24,6 +25,8 @@ public class GetEntityInfoHandler implements NodeHandler {
                 switch (pinId) {
                     case "name": return entity.getName().getString();
                     case "type": return entity.getType().getDescription().getString();
+                    case "registry_name": 
+                        return BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
                     case "pos_x": return String.valueOf(entity.getX());
                     case "pos_y": return String.valueOf(entity.getY());
                     case "pos_z": return String.valueOf(entity.getZ());
