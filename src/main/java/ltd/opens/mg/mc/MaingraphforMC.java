@@ -25,6 +25,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import net.minecraft.commands.CommandSourceStack;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 @Mod(MaingraphforMC.MODID)
 public class MaingraphforMC {
@@ -100,29 +102,71 @@ public class MaingraphforMC {
     }
 
     public static class BlueprintServerHandler {
+        private final java.util.Map<java.util.UUID, Double[]> lastPositions = new java.util.HashMap<>();
+        private JsonObject cachedBlueprint = null;
+        private long lastBlueprintLoadTime = 0;
+
+        private JsonObject getBlueprint(ServerLevel level) {
+            try {
+                Path dataFile = level.getServer().getWorldPath(LevelResource.ROOT).resolve("blueprint_data.json");
+                if (Files.exists(dataFile)) {
+                    long lastModified = Files.getLastModifiedTime(dataFile).toMillis();
+                    if (cachedBlueprint == null || lastModified > lastBlueprintLoadTime) {
+                        String json = Files.readString(dataFile);
+                        cachedBlueprint = JsonParser.parseString(json).getAsJsonObject();
+                        lastBlueprintLoadTime = lastModified;
+                    }
+                    return cachedBlueprint;
+                }
+            } catch (Exception e) {
+                // Error loading or parsing
+            }
+            return null;
+        }
+
         @SubscribeEvent
         public void onServerTick(ServerTickEvent.Post event) {
             // Player movement check on server
             var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-            
             if (server == null) return;
+
+            // Only check every 5 ticks (1/4 second) to reduce load
+            if (server.getTickCount() % 5 != 0) return;
 
             for (var player : server.getPlayerList().getPlayers()) {
                 double x = player.getX();
                 double y = player.getY();
                 double z = player.getZ();
+                java.util.UUID uuid = player.getUUID();
 
-                try {
-                    ServerLevel level = (ServerLevel) player.level();
-                    Path dataFile = level.getServer().getWorldPath(LevelResource.ROOT).resolve("blueprint_data.json");
-                    if (Files.exists(dataFile)) {
-                        String json = Files.readString(dataFile);
-                        BlueprintEngine.execute(level, json, "on_player_move", "", new String[0], 
-                            player.getUUID().toString(), player.getName().getString(), x, y, z);
+                Double[] lastPos = lastPositions.get(uuid);
+                if (lastPos != null) {
+                    double dx = x - lastPos[0];
+                    double dy = y - lastPos[1];
+                    double dz = z - lastPos[2];
+
+                    // Only trigger if moved more than 0.5 blocks (squared distance > 0.25)
+                    if (dx * dx + dy * dy + dz * dz > 0.25) {
+                        try {
+                            ServerLevel level = (ServerLevel) player.level();
+                            JsonObject blueprint = getBlueprint(level);
+                            if (blueprint != null) {
+                                BlueprintEngine.execute(level, blueprint, "on_player_move", "", new String[0], 
+                                    uuid.toString(), player.getName().getString(), x, y, z);
+                            }
+                            lastPositions.put(uuid, new Double[]{x, y, z});
+                        } catch (Exception e) {
+                            // Ignore
+                        }
                     }
-                } catch (Exception e) {
-                    // Ignore
+                } else {
+                    lastPositions.put(uuid, new Double[]{x, y, z});
                 }
+            }
+
+            // Cleanup offline players
+            if (server.getTickCount() % 100 == 0) {
+                lastPositions.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
             }
         }
     }
