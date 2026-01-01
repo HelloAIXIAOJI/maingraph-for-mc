@@ -75,5 +75,7 @@
   "gui.mgmc.blueprint_editor.save_confirm.title": "蓝图已修改，是否保存？",
   "gui.mgmc.blueprint_editor.save_confirm.save": "保存并退出",
   "gui.mgmc.blueprint_editor.save_confirm.discard": "直接退出",
-  "gui.mgmc.blueprint_editor.saved": "已保存！"
+  "gui.mgmc.blueprint_editor.saved": "已保存！",
+  "gui.mgmc.blueprint_editor.auto_layout": "整理",
+  "gui.mgmc.blueprint_editor.layout_complete": "布局整理完成！"
 }

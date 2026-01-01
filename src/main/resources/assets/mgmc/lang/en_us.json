@@ -75,5 +75,7 @@
   "gui.mgmc.blueprint_editor.save_confirm.title": "Blueprint modified, save changes?",
   "gui.mgmc.blueprint_editor.save_confirm.save": "Save and Exit",
   "gui.mgmc.blueprint_editor.save_confirm.discard": "Discard and Exit",
-  "gui.mgmc.blueprint_editor.saved": "Saved!"
+  "gui.mgmc.blueprint_editor.saved": "Saved!",
+  "gui.mgmc.blueprint_editor.auto_layout": "Arrange",
+  "gui.mgmc.blueprint_editor.layout_complete": "Layout complete!"
 }

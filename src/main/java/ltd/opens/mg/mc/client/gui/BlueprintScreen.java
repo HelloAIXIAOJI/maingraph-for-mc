@@ -84,6 +84,11 @@ public class BlueprintScreen extends Screen {
         // Reset View
         rightX -= 70;
         renderCustomButton(guiGraphics, mouseX, mouseY, rightX, 3, 70, 20, "gui.mgmc.blueprint_editor.reset_view");
+        
+        // Arrange
+        rightX -= 45;
+        renderCustomButton(guiGraphics, mouseX, mouseY, rightX, 3, 40, 20, "gui.mgmc.blueprint_editor.auto_layout");
+        
         // Save
         rightX -= 55;
         renderCustomButton(guiGraphics, mouseX, mouseY, rightX, 3, 50, 20, "gui.mgmc.blueprint_editor.save");
@@ -204,6 +209,13 @@ public class BlueprintScreen extends Screen {
             rightX -= 70;
             if (isHovering((int)mouseX, (int)mouseY, rightX, 3, 70, 20)) {
                 state.resetView();
+                return true;
+            }
+
+            // Auto Layout
+            rightX -= 45;
+            if (isHovering((int)mouseX, (int)mouseY, rightX, 3, 40, 20)) {
+                state.autoLayout();
                 return true;
             }
             
