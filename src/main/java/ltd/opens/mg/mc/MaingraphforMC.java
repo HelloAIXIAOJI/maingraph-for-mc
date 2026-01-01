@@ -50,6 +50,7 @@ public class MaingraphforMC {
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("mgrun")
+            .requires(s -> true)
             .then(Commands.argument("name", StringArgumentType.word())
                 .then(Commands.argument("args", StringArgumentType.greedyString())
                     .executes(context -> {
@@ -64,12 +65,11 @@ public class MaingraphforMC {
                         var pos = source.getPosition();
                         
                         try {
-                            Path dataFile = level.getServer().getWorldPath(LevelResource.ROOT).resolve("blueprint_data.json");
-                            if (Files.exists(dataFile)) {
-                                String json = Files.readString(dataFile);
-                                BlueprintEngine.execute(level, json, "on_mgrun", name, args, triggerUuid, triggerName, pos.x, pos.y, pos.z);
+                            JsonObject blueprint = BlueprintServerHandler.getBlueprint(level);
+                            if (blueprint != null) {
+                                BlueprintEngine.execute(level, blueprint, "on_mgrun", name, args, triggerUuid, triggerName, pos.x, pos.y, pos.z);
                             } else {
-                                context.getSource().sendFailure(Component.literal("Blueprint data file not found on server: " + dataFile.toAbsolutePath()));
+                                context.getSource().sendFailure(Component.literal("Blueprint data file not found on server."));
                             }
                         } catch (Exception e) {
                             context.getSource().sendFailure(Component.literal("Failed to execute blueprint on server: " + e.getMessage()));
@@ -85,12 +85,11 @@ public class MaingraphforMC {
                     String triggerName = source.getTextName();
                     var pos = source.getPosition();
                     try {
-                        Path dataFile = level.getServer().getWorldPath(LevelResource.ROOT).resolve("blueprint_data.json");
-                        if (Files.exists(dataFile)) {
-                            String json = Files.readString(dataFile);
-                            BlueprintEngine.execute(level, json, "on_mgrun", name, new String[0], triggerUuid, triggerName, pos.x, pos.y, pos.z);
+                        JsonObject blueprint = BlueprintServerHandler.getBlueprint(level);
+                        if (blueprint != null) {
+                            BlueprintEngine.execute(level, blueprint, "on_mgrun", name, new String[0], triggerUuid, triggerName, pos.x, pos.y, pos.z);
                         } else {
-                            context.getSource().sendFailure(Component.literal("Blueprint data file not found on server: " + dataFile.toAbsolutePath()));
+                            context.getSource().sendFailure(Component.literal("Blueprint data file not found on server."));
                         }
                     } catch (Exception e) {
                         context.getSource().sendFailure(Component.literal("Failed to execute blueprint on server: " + e.getMessage()));
@@ -103,10 +102,10 @@ public class MaingraphforMC {
 
     public static class BlueprintServerHandler {
         private final java.util.Map<java.util.UUID, Double[]> lastPositions = new java.util.HashMap<>();
-        private JsonObject cachedBlueprint = null;
-        private long lastBlueprintLoadTime = 0;
+        private static JsonObject cachedBlueprint = null;
+        private static long lastBlueprintLoadTime = 0;
 
-        private JsonObject getBlueprint(ServerLevel level) {
+        public static JsonObject getBlueprint(ServerLevel level) {
             try {
                 Path dataFile = level.getServer().getWorldPath(LevelResource.ROOT).resolve("blueprint_data.json");
                 if (Files.exists(dataFile)) {
