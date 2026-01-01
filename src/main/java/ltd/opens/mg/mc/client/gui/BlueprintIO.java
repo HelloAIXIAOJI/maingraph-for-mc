@@ -43,17 +43,17 @@ public class BlueprintIO {
                 nodeObj.add("inputs", inputs);
 
                 JsonObject outputs = new JsonObject();
-                for (NodeDefinition.PortDefinition port : node.definition.outputs()) {
+                for (GuiNode.NodePort port : node.outputs) {
                     JsonArray targets = new JsonArray();
                     for (GuiConnection conn : connections) {
-                        if (conn.from == node && conn.fromPort.equals(port.id())) {
+                        if (conn.from == node && conn.fromPort.equals(port.id)) {
                             JsonObject target = new JsonObject();
                             target.addProperty("nodeId", conn.to.id);
                             target.addProperty("socket", conn.toPort);
                             targets.add(target);
                         }
                     }
-                    outputs.add(port.id(), targets);
+                    outputs.add(port.id, targets);
                 }
                 nodeObj.add("outputs", outputs);
                 execution.add(nodeObj);
@@ -70,6 +70,29 @@ public class BlueprintIO {
                 nodeObj.addProperty("x", node.x);
                 nodeObj.addProperty("y", node.y);
                 nodeObj.add("inputValues", node.inputValues);
+                
+                // Save dynamic outputs (like for switch node)
+                JsonArray dynamicOutputs = new JsonArray();
+                for (GuiNode.NodePort port : node.outputs) {
+                    boolean isDefault = false;
+                    for (NodeDefinition.PortDefinition defPort : node.definition.outputs()) {
+                        if (defPort.id().equals(port.id)) {
+                            isDefault = true;
+                            break;
+                        }
+                    }
+                    if (!isDefault) {
+                        JsonObject pObj = new JsonObject();
+                        pObj.addProperty("id", port.id);
+                        pObj.addProperty("name", port.displayName);
+                        pObj.addProperty("type", port.type.name());
+                        dynamicOutputs.add(pObj);
+                    }
+                }
+                if (dynamicOutputs.size() > 0) {
+                    nodeObj.add("dynamicOutputs", dynamicOutputs);
+                }
+                
                 nodesArray.add(nodeObj);
             }
             ui.add("nodes", nodesArray);
@@ -127,6 +150,17 @@ public class BlueprintIO {
                         node.id = obj.get("id").getAsString();
                         if (obj.has("inputValues")) {
                             node.inputValues = obj.getAsJsonObject("inputValues");
+                        }
+                        if (obj.has("dynamicOutputs")) {
+                            for (JsonElement p : obj.getAsJsonArray("dynamicOutputs")) {
+                                JsonObject pObj = p.getAsJsonObject();
+                                node.addOutput(
+                                    pObj.get("id").getAsString(),
+                                    pObj.get("name").getAsString(),
+                                    NodeDefinition.PortType.valueOf(pObj.get("type").getAsString()),
+                                    0xFFFFFFFF
+                                );
+                            }
                         }
                         nodes.add(node);
                         nodeMap.put(node.id, node);

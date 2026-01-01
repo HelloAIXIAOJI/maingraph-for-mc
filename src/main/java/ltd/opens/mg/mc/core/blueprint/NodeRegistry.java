@@ -129,5 +129,20 @@ public class NodeRegistry {
                 new String[]{"STRING", "FLOAT", "BOOLEAN", "UUID", "INT", "LIST"})
             .addOutput("output", "node.mgmc.cast.port.output", NodeDefinition.PortType.ANY, 0xFFAAAAAA)
             .build());
+
+        register(new NodeDefinition.Builder("switch", "node.mgmc.switch.name")
+            .category("node_category.mgmc.logic")
+            .color(0xFF888888)
+            .addInput("exec", "node.mgmc.port.exec_in", NodeDefinition.PortType.EXEC, colorExec)
+            .addInput("control", "node.mgmc.switch.port.control", NodeDefinition.PortType.ANY, 0xFFAAAAAA)
+            .addOutput("default", "node.mgmc.switch.port.default", NodeDefinition.PortType.EXEC, colorExec)
+            .build());
+
+        register(new NodeDefinition.Builder("string", "node.mgmc.string.name")
+            .category("node_category.mgmc.logic")
+            .color(colorString)
+            .addInput("value", "node.mgmc.port.value", NodeDefinition.PortType.STRING, colorString, true, "")
+            .addOutput("output", "node.mgmc.port.output", NodeDefinition.PortType.STRING, colorString)
+            .build());
     }
 }

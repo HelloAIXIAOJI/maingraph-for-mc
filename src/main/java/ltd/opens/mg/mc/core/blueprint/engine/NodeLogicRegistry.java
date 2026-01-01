@@ -89,9 +89,11 @@ public class NodeLogicRegistry {
         // Logic
         register("branch", new BranchHandler());
         register("cast", new CastHandler());
+        register("switch", new SwitchHandler());
 
         // Data
         register("player_health", new PlayerHealthHandler());
         register("add_float", new AddFloatHandler());
+        register("string", new StringHandler());
     }
 }

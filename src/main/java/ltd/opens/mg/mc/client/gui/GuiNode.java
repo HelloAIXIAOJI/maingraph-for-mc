@@ -57,7 +57,8 @@ public class GuiNode {
     private void updateSize(net.minecraft.client.gui.Font font) {
         // Calculate height
         int maxPorts = Math.max(inputs.size(), outputs.size());
-        this.height = Math.max(40, headerHeight + 10 + maxPorts * 15 + 5);
+        boolean hasAddButton = typeId.equals("switch");
+        this.height = Math.max(40, headerHeight + 10 + maxPorts * 15 + (hasAddButton ? 25 : 5));
 
         // Calculate width
         float minWidth = 100;
@@ -76,6 +77,11 @@ public class GuiNode {
         for (NodePort p : outputs) {
             float w = 10 + font.width(Component.translatable(p.displayName));
             maxOutputW = Math.max(maxOutputW, w);
+        }
+        
+        if (hasAddButton) {
+            float btnW = font.width(Component.translatable("node.mgmc.switch.add_branch")) + 20;
+            minWidth = Math.max(minWidth, btnW);
         }
 
         this.width = Math.max(minWidth, Math.max(titleW, maxInputW + maxOutputW + 20));
@@ -171,6 +177,22 @@ public class GuiNode {
             for (int i = 0; i < outputs.size(); i++) {
                 renderPort(guiGraphics, font, outputs.get(i), (int) (x + width), (int) (y + headerHeight + 10 + i * 15), false, connections, focusedNode, focusedPort, zoom);
             }
+            
+            // Add Branch Button for Switch Node
+            if (typeId.equals("switch")) {
+                int btnX = (int) x + 5;
+                int btnY = (int) (y + height - 20);
+                int btnW = (int) width - 10;
+                int btnH = 16;
+                
+                boolean hovered = worldMouseX >= btnX && worldMouseX <= btnX + btnW && worldMouseY >= btnY && worldMouseY <= btnY + btnH;
+                
+                guiGraphics.fill(btnX, btnY, btnX + btnW, btnY + btnH, hovered ? 0xFF444444 : 0xFF333333);
+                guiGraphics.renderOutline(btnX, btnY, btnW, btnH, 0xFF555555);
+                
+                Component btnText = Component.translatable("node.mgmc.switch.add_branch");
+                guiGraphics.drawString(font, btnText, btnX + (btnW - font.width(btnText)) / 2, btnY + 4, 0xFFFFFFFF, false);
+            }
         }
     }
 
@@ -186,6 +208,14 @@ public class GuiNode {
             case ANY: return 0xFFAAAAAA;
             default: return port.color;
         }
+    }
+
+    public boolean isDynamicPort(NodePort port) {
+        if (port.isInput) return false;
+        for (NodeDefinition.PortDefinition defPort : definition.outputs()) {
+            if (defPort.id().equals(port.id)) return false;
+        }
+        return true;
     }
 
     private void renderPort(GuiGraphics guiGraphics, net.minecraft.client.gui.Font font, NodePort port, int px, int py, boolean isInput, List<GuiConnection> connections, GuiNode focusedNode, String focusedPort, float zoom) {
@@ -279,12 +309,43 @@ public class GuiNode {
                 }
             } else {
                 guiGraphics.drawString(font, Component.translatable(port.displayName), px - 8 - font.width(Component.translatable(port.displayName)), py - 1, 0xFFAAAAAA, false);
+                
+                // Show remove button for dynamic ports
+                if (isDynamicPort(port) && zoom > 0.6f) {
+                    int rx = px - 8 - font.width(Component.translatable(port.displayName)) - 12;
+                    int ry = py - 4;
+                    guiGraphics.drawString(font, "×", rx, ry, 0xFFFF5555, false);
+                }
             }
         }
     }
 
     public boolean isMouseOverHeader(double worldMouseX, double worldMouseY) {
         return worldMouseX >= x && worldMouseX <= x + width && worldMouseY >= y && worldMouseY <= y + headerHeight;
+    }
+
+    public String getRemovePortAt(double worldMouseX, double worldMouseY, net.minecraft.client.gui.Font font) {
+        for (int i = 0; i < outputs.size(); i++) {
+            NodePort port = outputs.get(i);
+            if (isDynamicPort(port)) {
+                float[] pos = getPortPosition(i, false);
+                int rx = (int)pos[0] - 8 - font.width(Component.translatable(port.displayName)) - 12;
+                int ry = (int)pos[1] - 4;
+                if (worldMouseX >= rx && worldMouseX <= rx + 8 && worldMouseY >= ry && worldMouseY <= ry + 8) {
+                    return port.id;
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean isMouseOverAddButton(double worldMouseX, double worldMouseY) {
+        if (!typeId.equals("switch")) return false;
+        int btnX = (int) x + 5;
+        int btnY = (int) (y + height - 20);
+        int btnW = (int) width - 10;
+        int btnH = 16;
+        return worldMouseX >= btnX && worldMouseX <= btnX + btnW && worldMouseY >= btnY && worldMouseY <= btnY + btnH;
     }
 
     private void renderTriangle(GuiGraphics guiGraphics, float x1, float y1, float x2, float y2, float x3, float y3, int color) {

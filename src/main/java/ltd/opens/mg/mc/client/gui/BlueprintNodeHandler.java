@@ -1,6 +1,7 @@
 package ltd.opens.mg.mc.client.gui;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import ltd.opens.mg.mc.core.blueprint.NodeDefinition;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -15,6 +16,17 @@ public class BlueprintNodeHandler {
     }
 
     public boolean mouseClicked(double worldMouseX, double worldMouseY, Font font, BlueprintScreen screen) {
+        // Check for remove port click
+        for (GuiNode node : state.nodes) {
+            String portId = node.getRemovePortAt(worldMouseX, worldMouseY, font);
+            if (portId != null) {
+                node.outputs.removeIf(p -> p.id.equals(portId));
+                state.connections.removeIf(c -> c.from == node && c.fromPort.equals(portId));
+                state.markDirty();
+                return true;
+            }
+        }
+
         // Check for input box click check first
         for (GuiNode node : state.nodes) {
             for (int i = 0; i < node.inputs.size(); i++) {
@@ -39,7 +51,8 @@ public class BlueprintNodeHandler {
                             if (port.type == NodeDefinition.PortType.BOOLEAN) {
                                 JsonElement val = node.inputValues.get(port.id);
                                 boolean current = val != null ? val.getAsBoolean() : (port.defaultValue instanceof Boolean ? (Boolean) port.defaultValue : false);
-                                node.inputValues.addProperty(port.id, !current);
+                                boolean nextVal = !current;
+                                node.inputValues.addProperty(port.id, nextVal);
                                 state.markDirty();
                             } else if (port.options != null && port.options.length > 0) {
                                 // Open selection modal instead of cycling
@@ -101,6 +114,24 @@ public class BlueprintNodeHandler {
         // Check for node header click
         for (int i = state.nodes.size() - 1; i >= 0; i--) {
             GuiNode node = state.nodes.get(i);
+            if (node.isMouseOverAddButton(worldMouseX, worldMouseY)) {
+                // Add new branch to switch node
+                Minecraft.getInstance().setScreen(new InputModalScreen(
+                    screen,
+                    Component.translatable("gui.mgmc.modal.enter_value", Component.translatable("node.mgmc.switch.name")).getString(),
+                    "",
+                    false,
+                    (newText) -> {
+                         if (newText != null && !newText.isEmpty()) {
+                             if (node.getPortByName(newText, false) == null) {
+                                 node.addOutput(newText, newText, NodeDefinition.PortType.EXEC, 0xFFFFFFFF);
+                                 state.markDirty();
+                             }
+                         }
+                     }
+                ));
+                return true;
+            }
             if (node.isMouseOverHeader(worldMouseX, worldMouseY)) {
                 state.draggingNode = node;
                 state.dragOffsetX = (float) (worldMouseX - node.x);
