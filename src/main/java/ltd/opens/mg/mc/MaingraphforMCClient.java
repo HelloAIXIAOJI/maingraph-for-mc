@@ -35,7 +35,7 @@ public class MaingraphforMCClient {
         KeyConflictContext.IN_GAME,
         KeyModifier.CONTROL,
         InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_B,
+        GLFW.GLFW_KEY_M,
         MGMC_CATEGORY
     );
 
