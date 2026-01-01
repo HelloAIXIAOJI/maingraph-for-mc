@@ -51,85 +51,121 @@ public class MaingraphforMC {
     public void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("mgrun")
             .requires(s -> true)
-            .then(Commands.argument("name", StringArgumentType.word())
-                .then(Commands.argument("args", StringArgumentType.greedyString())
+            .then(Commands.argument("blueprint", StringArgumentType.word())
+                .then(Commands.argument("event", StringArgumentType.word())
+                    .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .executes(context -> {
+                            String blueprintName = StringArgumentType.getString(context, "blueprint");
+                            String eventName = StringArgumentType.getString(context, "event");
+                            String argsStr = StringArgumentType.getString(context, "args");
+                            String[] args = argsStr.split("\\s+");
+                            
+                            CommandSourceStack source = context.getSource();
+                            ServerLevel level = source.getLevel();
+                            String triggerUuid = source.getEntity() != null ? source.getEntity().getUUID().toString() : "";
+                            String triggerName = source.getTextName();
+                            var pos = source.getPosition();
+                            
+                            try {
+                                JsonObject blueprint = BlueprintServerHandler.getBlueprint(level, blueprintName);
+                                if (blueprint != null) {
+                                    BlueprintEngine.execute(level, blueprint, "on_mgrun", eventName, args, triggerUuid, triggerName, pos.x, pos.y, pos.z);
+                                } else {
+                                    context.getSource().sendFailure(Component.literal("Blueprint '" + blueprintName + "' not found."));
+                                }
+                            } catch (Exception e) {
+                                context.getSource().sendFailure(Component.literal("Failed to execute blueprint: " + e.getMessage()));
+                            }
+                            return 1;
+                        })
+                    )
                     .executes(context -> {
-                        String name = StringArgumentType.getString(context, "name");
-                        String argsStr = StringArgumentType.getString(context, "args");
-                        String[] args = argsStr.split("\\s+");
-                        
+                        String blueprintName = StringArgumentType.getString(context, "blueprint");
+                        String eventName = StringArgumentType.getString(context, "event");
                         CommandSourceStack source = context.getSource();
                         ServerLevel level = source.getLevel();
                         String triggerUuid = source.getEntity() != null ? source.getEntity().getUUID().toString() : "";
                         String triggerName = source.getTextName();
                         var pos = source.getPosition();
-                        
                         try {
-                            JsonObject blueprint = BlueprintServerHandler.getBlueprint(level);
+                            JsonObject blueprint = BlueprintServerHandler.getBlueprint(level, blueprintName);
                             if (blueprint != null) {
-                                BlueprintEngine.execute(level, blueprint, "on_mgrun", name, args, triggerUuid, triggerName, pos.x, pos.y, pos.z);
+                                BlueprintEngine.execute(level, blueprint, "on_mgrun", eventName, new String[0], triggerUuid, triggerName, pos.x, pos.y, pos.z);
                             } else {
-                                context.getSource().sendFailure(Component.literal("Blueprint data file not found on server."));
+                                context.getSource().sendFailure(Component.literal("Blueprint '" + blueprintName + "' not found."));
                             }
                         } catch (Exception e) {
-                            context.getSource().sendFailure(Component.literal("Failed to execute blueprint on server: " + e.getMessage()));
+                            context.getSource().sendFailure(Component.literal("Failed to execute blueprint: " + e.getMessage()));
                         }
                         return 1;
                     })
                 )
-                .executes(context -> {
-                    String name = StringArgumentType.getString(context, "name");
-                    CommandSourceStack source = context.getSource();
-                    ServerLevel level = source.getLevel();
-                    String triggerUuid = source.getEntity() != null ? source.getEntity().getUUID().toString() : "";
-                    String triggerName = source.getTextName();
-                    var pos = source.getPosition();
-                    try {
-                        JsonObject blueprint = BlueprintServerHandler.getBlueprint(level);
-                        if (blueprint != null) {
-                            BlueprintEngine.execute(level, blueprint, "on_mgrun", name, new String[0], triggerUuid, triggerName, pos.x, pos.y, pos.z);
-                        } else {
-                            context.getSource().sendFailure(Component.literal("Blueprint data file not found on server."));
-                        }
-                    } catch (Exception e) {
-                        context.getSource().sendFailure(Component.literal("Failed to execute blueprint on server: " + e.getMessage()));
-                    }
-                    return 1;
-                })
             )
         );
     }
 
     public static class BlueprintServerHandler {
         private final java.util.Map<java.util.UUID, Double[]> lastPositions = new java.util.HashMap<>();
-        private static JsonObject cachedBlueprint = null;
-        private static long lastBlueprintLoadTime = 0;
+        
+        private static class CachedBlueprint {
+            JsonObject json;
+            long lastModified;
+            CachedBlueprint(JsonObject json, long lastModified) {
+                this.json = json;
+                this.lastModified = lastModified;
+            }
+        }
+        
+        private static final java.util.Map<String, CachedBlueprint> blueprintCache = new java.util.HashMap<>();
 
-        public static JsonObject getBlueprint(ServerLevel level) {
+        public static Path getBlueprintsDir(ServerLevel level) {
+            Path dir = level.getServer().getWorldPath(LevelResource.ROOT).resolve("mgmc_blueprints");
+            if (!Files.exists(dir)) {
+                try {
+                    Files.createDirectories(dir);
+                } catch (Exception e) {}
+            }
+            return dir;
+        }
+
+        public static JsonObject getBlueprint(ServerLevel level, String name) {
             try {
-                Path dataFile = level.getServer().getWorldPath(LevelResource.ROOT).resolve("blueprint_data.json");
+                if (!name.endsWith(".json")) name += ".json";
+                Path dataFile = getBlueprintsDir(level).resolve(name);
                 if (Files.exists(dataFile)) {
                     long lastModified = Files.getLastModifiedTime(dataFile).toMillis();
-                    if (cachedBlueprint == null || lastModified > lastBlueprintLoadTime) {
+                    CachedBlueprint cached = blueprintCache.get(name);
+                    if (cached == null || lastModified > cached.lastModified) {
                         String json = Files.readString(dataFile);
-                        cachedBlueprint = JsonParser.parseString(json).getAsJsonObject();
-                        lastBlueprintLoadTime = lastModified;
+                        JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+                        cached = new CachedBlueprint(obj, lastModified);
+                        blueprintCache.put(name, cached);
                     }
-                    return cachedBlueprint;
+                    return cached.json;
                 }
-            } catch (Exception e) {
-                // Error loading or parsing
-            }
+            } catch (Exception e) {}
             return null;
+        }
+
+        public static java.util.Collection<JsonObject> getAllBlueprints(ServerLevel level) {
+            java.util.List<JsonObject> all = new java.util.ArrayList<>();
+            try {
+                Path dir = getBlueprintsDir(level);
+                try (var stream = Files.list(dir)) {
+                    stream.filter(p -> p.toString().endsWith(".json")).forEach(p -> {
+                        String name = p.getFileName().toString();
+                        JsonObject bp = getBlueprint(level, name);
+                        if (bp != null) all.add(bp);
+                    });
+                }
+            } catch (Exception e) {}
+            return all;
         }
 
         @SubscribeEvent
         public void onServerTick(ServerTickEvent.Post event) {
-            // Player movement check on server
             var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
             if (server == null) return;
-
-            // Only check every 5 ticks (1/4 second) to reduce load
             if (server.getTickCount() % 5 != 0) return;
 
             for (var player : server.getPlayerList().getPlayers()) {
@@ -144,26 +180,21 @@ public class MaingraphforMC {
                     double dy = y - lastPos[1];
                     double dz = z - lastPos[2];
 
-                    // Only trigger if moved more than 0.5 blocks (squared distance > 0.25)
                     if (dx * dx + dy * dy + dz * dz > 0.25) {
                         try {
                             ServerLevel level = (ServerLevel) player.level();
-                            JsonObject blueprint = getBlueprint(level);
-                            if (blueprint != null) {
+                            for (JsonObject blueprint : getAllBlueprints(level)) {
                                 BlueprintEngine.execute(level, blueprint, "on_player_move", "", new String[0], 
                                     uuid.toString(), player.getName().getString(), x, y, z);
                             }
                             lastPositions.put(uuid, new Double[]{x, y, z});
-                        } catch (Exception e) {
-                            // Ignore
-                        }
+                        } catch (Exception e) {}
                     }
                 } else {
                     lastPositions.put(uuid, new Double[]{x, y, z});
                 }
             }
 
-            // Cleanup offline players
             if (server.getTickCount() % 100 == 0) {
                 lastPositions.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
             }

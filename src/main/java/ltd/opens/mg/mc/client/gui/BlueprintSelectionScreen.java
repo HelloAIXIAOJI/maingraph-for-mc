@@ -1,0 +1,355 @@
+package ltd.opens.mg.mc.client.gui;
+
+import ltd.opens.mg.mc.MaingraphforMCClient;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class BlueprintSelectionScreen extends Screen {
+    private BlueprintList list;
+    private EditBox newBlueprintName;
+    private Button openButton;
+    private Button createButton;
+    
+    // Context Menu State
+    private BlueprintEntry contextMenuEntry;
+    private double menuX, menuY;
+    private boolean showMenu = false;
+    private EditBox renameBox;
+    private boolean isRenaming = false;
+
+    public BlueprintSelectionScreen() {
+        super(Component.literal("Select Blueprint"));
+    }
+
+    @Override
+    protected void init() {
+        // List area: 60px top margin (to accommodate Create box), 60px bottom margin
+        this.list = new BlueprintList(this.minecraft, this.width, this.height - 120, 60, 24);
+        
+        this.addRenderableWidget(this.list);
+        this.setFocused(this.list);
+
+        // Create New Blueprint section at the top
+        int createWidth = 200;
+        int createHeight = 20;
+        int createX = (this.width - createWidth - 60) / 2;
+        int createY = 35;
+
+        this.newBlueprintName = new EditBox(this.font, createX, createY, createWidth, createHeight, Component.literal("New Blueprint Name"));
+        this.newBlueprintName.setHint(Component.literal("New blueprint name..."));
+        this.addRenderableWidget(this.newBlueprintName);
+
+        this.createButton = Button.builder(Component.literal("Create"), b -> {
+            String name = this.newBlueprintName.getValue().trim();
+            if (!name.isEmpty()) {
+                if (!name.endsWith(".json")) name += ".json";
+                Path newFile = MaingraphforMCClient.getBlueprintsDir().resolve(name);
+                Minecraft.getInstance().setScreen(new BlueprintScreen(newFile));
+            }
+        }).bounds(createX + createWidth + 5, createY, 50, createHeight).build();
+        this.addRenderableWidget(this.createButton);
+
+        // Add action buttons at the bottom
+        int buttonWidth = 100;
+        int buttonHeight = 20;
+        int spacing = 10;
+        int totalWidth = (buttonWidth * 3) + (spacing * 2);
+        int startX = (this.width - totalWidth) / 2;
+        int buttonY = this.height - 40;
+
+        this.openButton = Button.builder(Component.literal("Open"), b -> {
+            if (this.list.getSelected() != null) {
+                Minecraft.getInstance().setScreen(new BlueprintScreen(this.list.getSelected().path));
+            }
+        }).bounds(startX, buttonY, buttonWidth, buttonHeight).build();
+        
+        this.addRenderableWidget(this.openButton);
+        
+        this.addRenderableWidget(Button.builder(Component.literal("Back"), b -> {
+            Minecraft.getInstance().setScreen(null);
+        }).bounds(startX + buttonWidth + spacing, buttonY, buttonWidth, buttonHeight).build());
+        
+        this.addRenderableWidget(Button.builder(Component.literal("Refresh"), b -> {
+            refreshFileList();
+        }).bounds(startX + (buttonWidth + spacing) * 2, buttonY, buttonWidth, buttonHeight).build());
+
+        refreshFileList();
+
+        // Rename box (initially hidden)
+        this.renameBox = new EditBox(this.font, 0, 0, 100, 20, Component.literal("Rename"));
+        this.renameBox.setVisible(false);
+        this.addRenderableWidget(this.renameBox);
+    }
+
+    private void refreshFileList() {
+        this.list.clearEntries();
+        try {
+            Path dir = MaingraphforMCClient.getBlueprintsDir();
+            if (Files.exists(dir)) {
+                try (var stream = Files.list(dir)) {
+                    List<Path> files = stream
+                        .filter(p -> p.toString().endsWith(".json"))
+                        .collect(Collectors.toList());
+                    for (Path file : files) {
+                        this.list.add(new BlueprintEntry(file));
+                    }
+                }
+            }
+        } catch (IOException e) {
+            // Log or handle error
+        }
+    }
+
+    @Override
+    public void tick() {
+        this.openButton.active = this.list.getSelected() != null;
+    }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        
+        // Draw title
+        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 15, 0xFFFFFF);
+        
+        // Draw list area background if it's not being drawn by the list
+        // This helps to see the bounds
+        // guiGraphics.fill(0, 40, this.width, this.height - 60, 0x44000000);
+        
+        if (this.list != null && this.list.children().isEmpty()) {
+            guiGraphics.drawCenteredString(this.font, "No blueprints found.", this.width / 2, this.height / 2 - 10, 0xAAAAAA);
+        }
+
+        if (showMenu) {
+            renderContextMenu(guiGraphics, mouseX, mouseY);
+        }
+    }
+
+    private void renderContextMenu(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int x = (int)menuX;
+        int y = (int)menuY;
+        int w = 100;
+        int h = 40;
+
+        if (x + w > this.width) x -= w;
+        if (y + h > this.height) y -= h;
+
+        guiGraphics.fill(x, y, x + w, y + h, 0xFF202020);
+        guiGraphics.renderOutline(x, y, w, h, 0xFFFFFFFF);
+
+        // Rename Option
+        boolean hoverRename = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + 20;
+        if (hoverRename) guiGraphics.fill(x + 1, y + 1, x + w - 1, y + 19, 0xFF404040);
+        guiGraphics.drawString(font, "Rename", x + 10, y + 6, 0xFFFFFFFF);
+
+        // Delete Option
+        boolean hoverDelete = mouseX >= x && mouseX <= x + w && mouseY >= y + 20 && mouseY <= y + 40;
+        if (hoverDelete) guiGraphics.fill(x + 1, y + 21, x + w - 1, y + 39, 0xFF404040);
+        guiGraphics.drawString(font, "Delete", x + 10, y + 26, 0xFFFF5555);
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean isDouble) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+
+        if (showMenu) {
+            int x = (int)menuX;
+            int y = (int)menuY;
+            int w = 100;
+            if (x + w > this.width) x -= w;
+            if (y + 40 > this.height) y -= 40;
+
+            if (mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + 20) {
+                startRename();
+                showMenu = false;
+                return true;
+            } else if (mouseX >= x && mouseX <= x + w && mouseY >= y + 20 && mouseY <= y + 40) {
+                deleteBlueprint();
+                showMenu = false;
+                return true;
+            }
+            showMenu = false;
+        }
+
+        if (isRenaming) {
+            if (renameBox.isMouseOver(mouseX, mouseY)) {
+                return renameBox.mouseClicked(event, isDouble);
+            } else {
+                finishRename(false);
+            }
+        }
+
+        return super.mouseClicked(event, isDouble);
+    }
+
+    private void startRename() {
+        isRenaming = true;
+        renameBox.setVisible(true);
+        renameBox.setX((int)menuX);
+        renameBox.setY((int)menuY);
+        String fileName = contextMenuEntry.path.getFileName().toString();
+        if (fileName.endsWith(".json")) {
+            fileName = fileName.substring(0, fileName.length() - 5);
+        }
+        renameBox.setValue(fileName);
+        setFocused(renameBox);
+    }
+
+    private void finishRename(boolean save) {
+        if (save && contextMenuEntry != null) {
+            String newName = renameBox.getValue().trim();
+            if (!newName.isEmpty()) {
+                if (!newName.endsWith(".json")) newName += ".json";
+                try {
+                    Files.move(contextMenuEntry.path, contextMenuEntry.path.resolveSibling(newName));
+                    refreshFileList();
+                } catch (IOException e) {}
+            }
+        }
+        isRenaming = false;
+        renameBox.setVisible(false);
+    }
+
+    private void deleteBlueprint() {
+        if (contextMenuEntry != null) {
+            try {
+                Files.deleteIfExists(contextMenuEntry.path);
+                refreshFileList();
+            } catch (IOException e) {}
+        }
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        if (isRenaming) {
+            int keyCode = event.key();
+            if (keyCode == 257 || keyCode == 335) { // ENTER or NUMPAD_ENTER
+                finishRename(true);
+                return true;
+            } else if (keyCode == 256) { // ESCAPE
+                finishRename(false);
+                return true;
+            }
+            
+            if (renameBox.keyPressed(event)) {
+                return true;
+            }
+        }
+        return super.keyPressed(event);
+    }
+
+    @Override
+    public boolean charTyped(CharacterEvent event) {
+        if (isRenaming) {
+            return renameBox.charTyped(event);
+        }
+        return super.charTyped(event);
+    }
+
+    class BlueprintList extends ObjectSelectionList<BlueprintEntry> {
+        public BlueprintList(Minecraft minecraft, int width, int height, int y, int itemHeight) {
+            super(minecraft, width, height, y, itemHeight);
+        }
+
+        public void add(BlueprintEntry entry) {
+            super.addEntry(entry);
+        }
+
+        @Override
+        public int getRowWidth() {
+            return 310;
+        }
+
+        @Override
+        public int getRowLeft() {
+            return BlueprintSelectionScreen.this.width / 2 - 155;
+        }
+    }
+
+    class BlueprintEntry extends ObjectSelectionList.Entry<BlueprintEntry> {
+        final Path path;
+        private long lastClickTime;
+
+        public BlueprintEntry(Path path) {
+            this.path = path;
+        }
+
+        @Override
+        public void renderContent(GuiGraphics guiGraphics, int index, int top, boolean isHovered, float partialTick) {
+            int entryWidth = this.getWidth();
+            int entryLeft = this.getX();
+            int entryHeight = this.getHeight();
+            
+            // Use getY() if it's set, otherwise fallback to top
+            int y = this.getY();
+            if (y <= 0) y = top;
+            
+            // If it's still 0 or less, it might be collapsed, but with ObjectSelectionList 
+            // the y should be managed by the list.
+            
+            String name = path.getFileName().toString();
+            if (name.endsWith(".json")) {
+                name = name.substring(0, name.length() - 5);
+            }
+            
+            // Render background if selected or hovered
+            if (this == BlueprintSelectionScreen.this.list.getSelected()) {
+                guiGraphics.fill(entryLeft, y, entryLeft + entryWidth, y + entryHeight, 0x44FFFFFF);
+                guiGraphics.renderOutline(entryLeft, y, entryWidth, entryHeight, 0xFFFFCC00);
+            } else if (isHovered) {
+                guiGraphics.fill(entryLeft, y, entryLeft + entryWidth, y + entryHeight, 0x22FFFFFF);
+                guiGraphics.renderOutline(entryLeft, y, entryWidth, entryHeight, 0xFF888888);
+            }
+
+            int color = this == BlueprintSelectionScreen.this.list.getSelected() ? 0xFFFFCC00 : (isHovered ? 0xFFFFFFFF : 0xFFAAAAAA);
+            guiGraphics.drawString(BlueprintSelectionScreen.this.font, name, entryLeft + 5, y + (entryHeight - 8) / 2, color);
+        }
+
+        @Override
+        public Component getNarration() {
+            String name = path.getFileName().toString();
+            if (name.endsWith(".json")) {
+                name = name.substring(0, name.length() - 5);
+            }
+            return Component.literal(name);
+        }
+
+        @Override
+        public boolean mouseClicked(MouseButtonEvent event, boolean isDouble) {
+            BlueprintSelectionScreen.this.list.setSelected(this);
+            
+            if (event.buttonInfo().button() == 1) { // Right click
+                contextMenuEntry = this;
+                menuX = event.x();
+                menuY = event.y();
+                showMenu = true;
+                return true;
+            }
+            
+            long now = System.currentTimeMillis();
+            if (now - lastClickTime < 250L) {
+                // Double click
+                Minecraft.getInstance().setScreen(new BlueprintScreen(this.path));
+                return true;
+            }
+            lastClickTime = now;
+            
+            return true;
+        }
+    }
+}

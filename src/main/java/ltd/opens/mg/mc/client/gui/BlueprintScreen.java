@@ -1,6 +1,7 @@
 package ltd.opens.mg.mc.client.gui;
 
 import ltd.opens.mg.mc.MaingraphforMCClient;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -15,9 +16,9 @@ public class BlueprintScreen extends Screen {
     private final BlueprintState state = new BlueprintState();
     private final BlueprintEventHandler eventHandler;
 
-    public BlueprintScreen() {
-        super(Component.literal("Blueprint Editor"));
-        this.dataFile = MaingraphforMCClient.getBlueprintPath();
+    public BlueprintScreen(Path dataFile) {
+        super(Component.literal("Blueprint Editor - " + dataFile.getFileName().toString()));
+        this.dataFile = dataFile;
         this.eventHandler = new BlueprintEventHandler(state);
         BlueprintIO.load(this.dataFile, state.nodes, state.connections);
     }
@@ -25,9 +26,11 @@ public class BlueprintScreen extends Screen {
     @Override
     protected void init() {
         super.init();
+        this.addRenderableWidget(Button.builder(Component.literal("Back"), (btn) -> Minecraft.getInstance().setScreen(new BlueprintSelectionScreen()))
+            .bounds(5, 5, 40, 20).build());
         this.addRenderableWidget(Button.builder(Component.literal("Save"), (btn) -> BlueprintIO.save(this.dataFile, state.nodes, state.connections))
-            .bounds(5, 5, 50, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal("Reset View"), (btn) -> state.resetView()).bounds(60, 5, 80, 20).build());
+            .bounds(50, 5, 40, 20).build());
+        this.addRenderableWidget(Button.builder(Component.literal("Reset View"), (btn) -> state.resetView()).bounds(95, 5, 80, 20).build());
     }
 
     @Override

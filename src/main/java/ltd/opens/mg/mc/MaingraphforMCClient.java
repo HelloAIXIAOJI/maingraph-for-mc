@@ -9,7 +9,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
-import ltd.opens.mg.mc.client.gui.BlueprintScreen;
+import ltd.opens.mg.mc.client.gui.BlueprintSelectionScreen;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -57,7 +57,7 @@ public class MaingraphforMCClient {
     public void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         while (BLUEPRINT_KEY.consumeClick()) {
-            mc.setScreen(new BlueprintScreen());
+            mc.setScreen(new BlueprintSelectionScreen());
         }
     }
 
@@ -65,19 +65,16 @@ public class MaingraphforMCClient {
         // Client setup logic
     }
 
-    public static Path getBlueprintPath() {
+    public static Path getBlueprintsDir() {
         Minecraft mc = Minecraft.getInstance();
         Path baseDir;
         if (mc.getSingleplayerServer() != null) {
-            // Singleplayer world directory
-            baseDir = mc.getSingleplayerServer().getWorldPath(LevelResource.ROOT);
+            baseDir = mc.getSingleplayerServer().getWorldPath(LevelResource.ROOT).resolve("mgmc_blueprints");
         } else if (mc.getCurrentServer() != null) {
-            // Multiplayer server specific directory in game root
             String serverName = mc.getCurrentServer().ip.replaceAll("[^a-zA-Z0-9.-]", "_");
-            baseDir = mc.gameDirectory.toPath().resolve("blueprints").resolve(serverName);
+            baseDir = mc.gameDirectory.toPath().resolve("mgmc_blueprints").resolve(serverName);
         } else {
-            // Fallback to game root
-            baseDir = mc.gameDirectory.toPath();
+            baseDir = mc.gameDirectory.toPath().resolve("mgmc_blueprints").resolve("local");
         }
 
         try {
@@ -88,6 +85,6 @@ public class MaingraphforMCClient {
             MaingraphforMC.LOGGER.error("Failed to create blueprint directory", e);
         }
 
-        return baseDir.resolve("blueprint_data.json");
+        return baseDir;
     }
 }
