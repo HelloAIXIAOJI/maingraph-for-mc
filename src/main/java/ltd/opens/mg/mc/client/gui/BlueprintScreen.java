@@ -108,6 +108,27 @@ public class BlueprintScreen extends Screen {
             state.menu.renderNodeContextMenu(guiGraphics, font, mouseX, mouseY, state.menuX, state.menuY);
         }
 
+        // --- Notification Popup ---
+        if (state.notificationMessage != null && state.notificationTimer > 0) {
+            int msgW = font.width(state.notificationMessage);
+            int popupW = msgW + 20;
+            int popupH = 20;
+            int popupX = (this.width - popupW) / 2;
+            int popupY = 40; // Just below top bar
+            
+            float alpha = Math.min(1.0f, state.notificationTimer / 10.0f);
+            int alphaInt = (int)(alpha * 255);
+            int bgColor = (alphaInt << 24) | 0x222222;
+            int textColor = (alphaInt << 24) | 0xFFFFFF;
+            int borderColor = (alphaInt << 24) | 0x555555;
+
+            guiGraphics.fill(popupX, popupY, popupX + popupW, popupY + popupH, bgColor);
+            guiGraphics.renderOutline(popupX, popupY, popupW, popupH, borderColor);
+            guiGraphics.drawString(font, state.notificationMessage, popupX + 10, popupY + (popupH - 9) / 2, textColor, false);
+            
+            state.notificationTimer--;
+        }
+
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
@@ -191,6 +212,7 @@ public class BlueprintScreen extends Screen {
             if (isHovering((int)mouseX, (int)mouseY, rightX, 3, 50, 20)) {
                 BlueprintIO.save(this.dataFile, state.nodes, state.connections);
                 state.isDirty = false;
+                state.showNotification(Component.translatable("gui.mgmc.blueprint_editor.saved").getString());
                 return true;
             }
             

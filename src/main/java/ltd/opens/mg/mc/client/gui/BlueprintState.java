@@ -32,6 +32,13 @@ public class BlueprintState {
     public String focusedPort = null;
     public int cursorTick = 0;
     public boolean isDirty = false;
+    public String notificationMessage = null;
+    public int notificationTimer = 0;
+
+    public void showNotification(String message) {
+        this.notificationMessage = message;
+        this.notificationTimer = 60; // 3 seconds at 20fps, but Minecraft render is faster, let's use ticks or simple counter
+    }
 
     public void markDirty() {
         this.isDirty = true;
