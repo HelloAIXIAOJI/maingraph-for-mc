@@ -94,5 +94,7 @@
   "gui.mgmc.blueprint_editor.save_confirm.discard": "Discard and Exit",
   "gui.mgmc.blueprint_editor.saved": "Saved!",
   "gui.mgmc.blueprint_editor.auto_layout": "Arrange",
-  "gui.mgmc.blueprint_editor.layout_complete": "Layout complete!"
+  "gui.mgmc.blueprint_editor.layout_complete": "Layout complete!",
+  "gui.mgmc.blueprint_editor.search_hint": "Search nodes...",
+  "gui.mgmc.blueprint_editor.no_nodes_found": "No nodes found"
 }

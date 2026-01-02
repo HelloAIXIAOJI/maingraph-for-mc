@@ -1,6 +1,7 @@
 package ltd.opens.mg.mc.client.gui;
 
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.input.KeyEvent;
 
@@ -28,7 +29,7 @@ public class BlueprintEventHandler {
         if (mouseY < 26) return false;
 
         // 1. Menu interactions (context menu or creation menu)
-        if (menuHandler.mouseClicked(mouseX, mouseY, button)) return true;
+        if (menuHandler.mouseClicked(mouseX, mouseY, button, screen.width, screen.height)) return true;
 
         // 2. View interactions (panning start)
         if (viewHandler.mouseClicked(mouseX, mouseY, button)) return true;
@@ -51,7 +52,7 @@ public class BlueprintEventHandler {
         return false;
     }
 
-    public boolean mouseReleased(MouseButtonEvent event) {
+    public boolean mouseReleased(MouseButtonEvent event, BlueprintScreen screen) {
         double mouseX = event.x();
         double mouseY = event.y();
         int button = event.buttonInfo().button();
@@ -61,7 +62,7 @@ public class BlueprintEventHandler {
         if (viewHandler.mouseReleased(mouseX, mouseY, button)) return true;
 
         // 2. Menu interactions (open context menu on right click release)
-        if (menuHandler.mouseReleased(mouseX, mouseY, button)) return true;
+        if (menuHandler.mouseReleased(mouseX, mouseY, button, screen.width, screen.height)) return true;
 
         // World coordinates for other interactions
         double worldMouseX = (mouseX - state.panX) / state.zoom;
@@ -94,10 +95,16 @@ public class BlueprintEventHandler {
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (menuHandler.mouseScrolled(mouseX, mouseY, scrollY)) return true;
         return viewHandler.mouseScrolled(mouseX, mouseY, scrollY);
     }
 
     public boolean keyPressed(KeyEvent event) {
+        if (menuHandler.keyPressed(event.key())) return true;
         return nodeHandler.keyPressed(event.key());
+    }
+
+    public boolean charTyped(CharacterEvent event) {
+        return menuHandler.charTyped(event);
     }
 }

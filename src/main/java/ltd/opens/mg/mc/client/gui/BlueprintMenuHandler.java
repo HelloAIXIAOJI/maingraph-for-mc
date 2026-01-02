@@ -1,5 +1,6 @@
 package ltd.opens.mg.mc.client.gui;
 
+import net.minecraft.client.input.CharacterEvent;
 import ltd.opens.mg.mc.core.blueprint.NodeDefinition;
 
 public class BlueprintMenuHandler {
@@ -9,7 +10,7 @@ public class BlueprintMenuHandler {
         this.state = state;
     }
 
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(double mouseX, double mouseY, int button, int screenWidth, int screenHeight) {
         if (state.showNodeContextMenu) {
             BlueprintMenu.ContextMenuResult result = state.menu.onClickContextMenu(mouseX, mouseY, state.menuX, state.menuY);
             if (result == BlueprintMenu.ContextMenuResult.DELETE) {
@@ -43,19 +44,13 @@ public class BlueprintMenuHandler {
         }
 
         if (state.showNodeMenu) {
-            NodeDefinition def = state.menu.onClickNodeMenu(mouseX, mouseY, state.menuX, state.menuY);
+            NodeDefinition def = state.menu.onClickNodeMenu(mouseX, mouseY, state.menuX, state.menuY, screenWidth, screenHeight);
             if (def != null) {
-                float worldX = (float) ((state.menuX - state.panX) / state.zoom);
-                float worldY = (float) ((state.menuY - state.panY) / state.zoom);
-                GuiNode node = new GuiNode(def, worldX, worldY);
-                state.nodes.add(node);
-                state.markDirty();
-                state.showNodeMenu = false;
-                state.menu.reset();
+                createNodeAtMenu(def);
                 return true;
             }
 
-            if (!state.menu.isClickInsideNodeMenu(mouseX, mouseY, state.menuX, state.menuY)) {
+            if (!state.menu.isClickInsideNodeMenu(mouseX, mouseY, state.menuX, state.menuY, screenWidth, screenHeight)) {
                 state.showNodeMenu = false;
                 state.menu.reset();
             }
@@ -65,7 +60,46 @@ public class BlueprintMenuHandler {
         return false;
     }
 
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    private void createNodeAtMenu(NodeDefinition def) {
+        float worldX = (float) ((state.menuX - state.panX) / state.zoom);
+        float worldY = (float) ((state.menuY - state.panY) / state.zoom);
+        GuiNode node = new GuiNode(def, worldX, worldY);
+        state.nodes.add(node);
+        state.markDirty();
+        state.showNodeMenu = false;
+        state.menu.reset();
+    }
+
+    public boolean keyPressed(int key) {
+        if (state.showNodeMenu) {
+            if (key == 257) { // Enter
+                NodeDefinition def = state.menu.getSelectedNode();
+                if (def != null) {
+                    createNodeAtMenu(def);
+                    return true;
+                }
+            }
+            return state.menu.keyPressed(key);
+        }
+        return false;
+    }
+
+    public boolean charTyped(CharacterEvent event) {
+        if (state.showNodeMenu) {
+            return state.menu.charTyped((char) event.codepoint());
+        }
+        return false;
+    }
+
+    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+        if (state.showNodeMenu) {
+            state.menu.mouseScrolled(mouseX, mouseY, amount);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean mouseReleased(double mouseX, double mouseY, int button, int screenWidth, int screenHeight) {
         if (button == 1) { // Right click
             double worldMouseX = (mouseX - state.panX) / state.zoom;
             double worldMouseY = (mouseY - state.panY) / state.zoom;
@@ -84,6 +118,7 @@ public class BlueprintMenuHandler {
             state.showNodeMenu = true;
             state.menuX = mouseX;
             state.menuY = mouseY;
+            state.menu.reset(); // Reset search when opening
             return true;
         }
         return false;

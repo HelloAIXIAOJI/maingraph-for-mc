@@ -106,7 +106,7 @@ public class BlueprintScreen extends Screen {
         guiGraphics.drawString(font, titleText, this.width - titleW - 8, height - 15, 0xFFFFFFFF, false);
 
         if (state.showNodeMenu) {
-            state.menu.renderNodeMenu(guiGraphics, font, mouseX, mouseY, state.menuX, state.menuY);
+            state.menu.renderNodeMenu(guiGraphics, font, mouseX, mouseY, state.menuX, state.menuY, this.width, this.height);
         }
         
         if (state.showNodeContextMenu) {
@@ -183,7 +183,7 @@ public class BlueprintScreen extends Screen {
 
     @Override
     public boolean charTyped(CharacterEvent event) {
-        return super.charTyped(event);
+        return eventHandler.charTyped(event) || super.charTyped(event);
     }
 
     @Override
@@ -236,7 +236,7 @@ public class BlueprintScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        return eventHandler.mouseReleased(event) || super.mouseReleased(event);
+        return eventHandler.mouseReleased(event, this) || super.mouseReleased(event);
     }
 
     @Override

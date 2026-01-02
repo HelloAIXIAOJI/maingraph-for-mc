@@ -97,5 +97,7 @@
   "gui.mgmc.blueprint_editor.save_confirm.discard": "直接退出",
   "gui.mgmc.blueprint_editor.saved": "已保存！",
   "gui.mgmc.blueprint_editor.auto_layout": "整理",
-  "gui.mgmc.blueprint_editor.layout_complete": "布局整理完成！"
+  "gui.mgmc.blueprint_editor.layout_complete": "布局整理完成！",
+  "gui.mgmc.blueprint_editor.search_hint": "搜索节点...",
+  "gui.mgmc.blueprint_editor.no_nodes_found": "未找到相关节点"
 }
