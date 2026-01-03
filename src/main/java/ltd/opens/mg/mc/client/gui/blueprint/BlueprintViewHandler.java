@@ -1,4 +1,4 @@
-package ltd.opens.mg.mc.client.gui;
+package ltd.opens.mg.mc.client.gui.blueprint;
 
 public class BlueprintViewHandler {
     private final BlueprintState state;

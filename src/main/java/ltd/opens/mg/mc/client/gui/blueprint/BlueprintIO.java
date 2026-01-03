@@ -1,5 +1,6 @@
-package ltd.opens.mg.mc.client.gui;
+package ltd.opens.mg.mc.client.gui.blueprint;
 
+import ltd.opens.mg.mc.client.gui.components.*;
 import com.google.gson.*;
 import ltd.opens.mg.mc.MaingraphforMC;
 import ltd.opens.mg.mc.core.blueprint.NodeDefinition;

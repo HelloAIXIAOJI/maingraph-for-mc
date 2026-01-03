@@ -1,4 +1,4 @@
-package ltd.opens.mg.mc.client.gui;
+package ltd.opens.mg.mc.client.gui.components;
 
 import com.google.gson.JsonObject;
 import ltd.opens.mg.mc.core.blueprint.NodeDefinition;

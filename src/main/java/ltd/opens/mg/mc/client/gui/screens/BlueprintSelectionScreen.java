@@ -1,4 +1,4 @@
-package ltd.opens.mg.mc.client.gui;
+package ltd.opens.mg.mc.client.gui.screens;
 
 import ltd.opens.mg.mc.MaingraphforMCClient;
 import net.minecraft.client.Minecraft;

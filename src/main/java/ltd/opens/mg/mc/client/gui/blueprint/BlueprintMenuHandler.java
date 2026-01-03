@@ -1,5 +1,7 @@
-package ltd.opens.mg.mc.client.gui;
+package ltd.opens.mg.mc.client.gui.blueprint;
 
+import ltd.opens.mg.mc.client.gui.screens.*;
+import ltd.opens.mg.mc.client.gui.components.*;
 import net.minecraft.client.input.CharacterEvent;
 import ltd.opens.mg.mc.core.blueprint.NodeDefinition;
 

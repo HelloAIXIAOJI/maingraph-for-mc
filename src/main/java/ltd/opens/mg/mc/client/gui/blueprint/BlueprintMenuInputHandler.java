@@ -1,4 +1,4 @@
-package ltd.opens.mg.mc.client.gui;
+package ltd.opens.mg.mc.client.gui.blueprint;
 
 import ltd.opens.mg.mc.core.blueprint.NodeDefinition;
 import java.util.List;

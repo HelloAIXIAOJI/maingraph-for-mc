@@ -1,4 +1,4 @@
-package ltd.opens.mg.mc.client.gui;
+package ltd.opens.mg.mc.client.gui.components;
 
 public class GuiConnection {
     public GuiNode from;
