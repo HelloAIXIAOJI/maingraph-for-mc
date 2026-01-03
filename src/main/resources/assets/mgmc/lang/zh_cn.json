@@ -79,6 +79,8 @@
   "node.mgmc.round_float.name": "四舍五入",
   "node.mgmc.floor_float.name": "向下取整 (Floor)",
   "node.mgmc.ceil_float.name": "向上取整 (Ceil)",
+  "node.mgmc.random_float.name": "随机浮点数",
+  "node.mgmc.random_int.name": "随机整数",
   "node.mgmc.compare_eq.name": "等于 (=)",
   "node.mgmc.compare_neq.name": "不等于 (!=)",
   "node.mgmc.compare_gt.name": "大于 (>)",

@@ -428,6 +428,22 @@ public class NodeRegistry {
             .addOutput("result", "node.mgmc.port.output", NodeDefinition.PortType.FLOAT, colorFloat)
             .build());
 
+        register(new NodeDefinition.Builder("random_float", "node.mgmc.random_float.name")
+            .category("node_category.mgmc.logic.math")
+            .color(0xFF888888)
+            .addInput("min", "node.mgmc.port.min", NodeDefinition.PortType.FLOAT, colorFloat, true, 0.0)
+            .addInput("max", "node.mgmc.port.max", NodeDefinition.PortType.FLOAT, colorFloat, true, 1.0)
+            .addOutput("result", "node.mgmc.port.output", NodeDefinition.PortType.FLOAT, colorFloat)
+            .build());
+
+        register(new NodeDefinition.Builder("random_int", "node.mgmc.random_int.name")
+            .category("node_category.mgmc.logic.math")
+            .color(0xFF888888)
+            .addInput("min", "node.mgmc.port.min", NodeDefinition.PortType.FLOAT, colorFloat, true, 0.0)
+            .addInput("max", "node.mgmc.port.max", NodeDefinition.PortType.FLOAT, colorFloat, true, 100.0)
+            .addOutput("result", "node.mgmc.port.output", NodeDefinition.PortType.FLOAT, colorFloat)
+            .build());
+
         // Logic -> Comparison
         register(new NodeDefinition.Builder("compare_eq", "node.mgmc.compare_eq.name")
             .category("node_category.mgmc.logic.comparison")

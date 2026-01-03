@@ -79,6 +79,8 @@
   "node.mgmc.round_float.name": "Round",
   "node.mgmc.floor_float.name": "Floor",
   "node.mgmc.ceil_float.name": "Ceil",
+  "node.mgmc.random_float.name": "Random Float",
+  "node.mgmc.random_int.name": "Random Integer",
   "node.mgmc.compare_eq.name": "Equal (=)",
   "node.mgmc.compare_neq.name": "Not Equal (!=)",
   "node.mgmc.compare_gt.name": "Greater Than (>)",

@@ -134,6 +134,8 @@ public class NodeLogicRegistry {
         register("round_float", new RoundFloatHandler());
         register("floor_float", new FloorFloatHandler());
         register("ceil_float", new CeilFloatHandler());
+        register("random_float", new RandomFloatHandler());
+        register("random_int", new RandomIntHandler());
         
         // Comparison
         register("compare_eq", new CompareFloatHandler("eq"));
