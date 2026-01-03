@@ -10,6 +10,7 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import ltd.opens.mg.mc.client.gui.BlueprintSelectionScreen;
+import ltd.opens.mg.mc.client.gui.AboutScreen;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -57,7 +58,11 @@ public class MaingraphforMCClient {
     public void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         while (BLUEPRINT_KEY.consumeClick()) {
-            mc.setScreen(new BlueprintSelectionScreen());
+            if (mc.player != null && mc.player.isCreative()) {
+                mc.setScreen(new BlueprintSelectionScreen());
+            } else {
+                mc.setScreen(new AboutScreen(null));
+            }
         }
     }
 

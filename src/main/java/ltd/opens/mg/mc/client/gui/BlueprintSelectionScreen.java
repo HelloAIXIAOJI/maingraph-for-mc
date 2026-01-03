@@ -37,6 +37,11 @@ public class BlueprintSelectionScreen extends Screen {
 
     @Override
     protected void init() {
+        if (this.minecraft.player != null && !this.minecraft.player.isCreative()) {
+            this.minecraft.setScreen(new AboutScreen(null));
+            return;
+        }
+
         // List area: 60px top margin (to accommodate Create box), 60px bottom margin
         this.list = new BlueprintList(this.minecraft, this.width, this.height - 120, 60, 24);
         

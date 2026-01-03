@@ -25,6 +25,10 @@ public class BlueprintScreen extends Screen {
 
     @Override
     protected void init() {
+        if (this.minecraft.player != null && !this.minecraft.player.isCreative()) {
+            this.minecraft.setScreen(new AboutScreen(null));
+            return;
+        }
         super.init();
         // Remove vanilla buttons, we'll use custom rendering and interaction
     }
