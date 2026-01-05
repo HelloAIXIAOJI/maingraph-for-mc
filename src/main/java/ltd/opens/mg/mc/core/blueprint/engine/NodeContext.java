@@ -22,6 +22,7 @@ public class NodeContext {
     public final Map<String, JsonObject> nodesMap;
     public final Map<String, Object> variables = new HashMap<>();
     public boolean breakRequested = false;
+    public int nodeExecCount = 0;
     public String lastTriggeredPin;
 
     public NodeContext(Level level, String eventName, String[] args, String triggerUuid, String triggerName, 

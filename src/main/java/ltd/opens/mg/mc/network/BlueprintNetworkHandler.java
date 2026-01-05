@@ -8,6 +8,7 @@ import ltd.opens.mg.mc.network.payloads.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.stream.Collectors;
@@ -15,9 +16,17 @@ import java.util.stream.Collectors;
 public class BlueprintNetworkHandler {
 
     public static class Server {
+        private static boolean hasPermission(ServerPlayer player) {
+            if (player.level().getServer() == null) return false;
+            return player.level().getServer().getProfilePermissions(new NameAndId(player.getUUID(), player.getGameProfile().name())).level().id() >= 2;
+        }
+
         public static void handleRequestList(final RequestBlueprintListPayload payload, final IPayloadContext context) {
             context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer player) {
+                    if (!hasPermission(player)) {
+                        return;
+                    }
                     var blueprints = MaingraphforMC.BlueprintServerHandler.getAllBlueprints((ServerLevel) player.level());
                     java.util.List<String> names = blueprints.stream()
                             .map(bp -> bp.has("name") ? bp.get("name").getAsString() : "unknown")
@@ -40,6 +49,9 @@ public class BlueprintNetworkHandler {
         public static void handleRequestData(final RequestBlueprintDataPayload payload, final IPayloadContext context) {
             context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer player) {
+                    if (!hasPermission(player)) {
+                        return;
+                    }
                     JsonObject bp = MaingraphforMC.BlueprintServerHandler.getBlueprint((ServerLevel) player.level(), payload.name());
                     if (bp != null) {
                         long version = MaingraphforMC.BlueprintServerHandler.getBlueprintVersion((ServerLevel) player.level(), payload.name());
@@ -52,6 +64,10 @@ public class BlueprintNetworkHandler {
         public static void handleSave(final SaveBlueprintPayload payload, final IPayloadContext context) {
             context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer player) {
+                    if (!hasPermission(player)) {
+                        context.reply(new SaveResultPayload(false, "You do not have permission to save blueprints.", 0));
+                        return;
+                    }
                     MaingraphforMC.BlueprintServerHandler.SaveResult result = MaingraphforMC.BlueprintServerHandler.saveBlueprint(
                             (ServerLevel) player.level(),
                             payload.name(),
@@ -66,6 +82,9 @@ public class BlueprintNetworkHandler {
         public static void handleDelete(final DeleteBlueprintPayload payload, final IPayloadContext context) {
             context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer player) {
+                    if (!hasPermission(player)) {
+                        return;
+                    }
                     MaingraphforMC.BlueprintServerHandler.deleteBlueprint((ServerLevel) player.level(), payload.name());
                     // Refresh list for all clients or just the sender?
                     // For simplicity, the client can request a refresh or we can broadcast.
@@ -82,6 +101,9 @@ public class BlueprintNetworkHandler {
         public static void handleRename(final RenameBlueprintPayload payload, final IPayloadContext context) {
             context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer player) {
+                    if (!hasPermission(player)) {
+                        return;
+                    }
                     MaingraphforMC.BlueprintServerHandler.renameBlueprint((ServerLevel) player.level(), payload.oldName(), payload.newName());
                     var blueprints = MaingraphforMC.BlueprintServerHandler.getAllBlueprints((ServerLevel) player.level());
                     java.util.List<String> names = blueprints.stream()

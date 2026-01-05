@@ -60,6 +60,13 @@ public class NodeLogicRegistry {
 
     public static void triggerExec(JsonObject node, String pinId, NodeContext ctx) {
         if (!node.has("outputs")) return;
+        
+        // 增加执行计数并检查上限，防止死循环或大规模循环导致卡服
+        ctx.nodeExecCount++;
+        if (ctx.nodeExecCount > ltd.opens.mg.mc.Config.getMaxNodeExecutions()) {
+            return;
+        }
+
         JsonObject outputs = node.getAsJsonObject("outputs");
         if (!outputs.has(pinId)) return;
 
