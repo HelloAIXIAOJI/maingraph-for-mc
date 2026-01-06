@@ -62,8 +62,9 @@ public class BlueprintEngine {
                 }
             }
 
+            int formatVersion = root.has("format_version") ? root.get("format_version").getAsInt() : 1;
             NodeContext ctx = new NodeContext(level, name, args, triggerUuid, triggerName, tx, ty, tz, speed, 
-                                            triggerBlockId, triggerItemId, triggerValue, triggerExtraUuid, nodesMap);
+                                            triggerBlockId, triggerItemId, triggerValue, triggerExtraUuid, nodesMap, formatVersion);
 
             for (JsonElement e : executionNodes) {
                 if (!e.isJsonObject()) continue;

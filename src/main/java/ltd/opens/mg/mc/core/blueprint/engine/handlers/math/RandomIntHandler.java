@@ -15,8 +15,8 @@ public class RandomIntHandler implements NodeHandler {
     public Object getValue(JsonObject node, String pinId, NodeContext ctx) {
         if (pinId.equals("result")) {
             try {
-                int min = (int) TypeConverter.toDouble(NodeLogicRegistry.evaluateInput(node, "min", ctx));
-                int max = (int) TypeConverter.toDouble(NodeLogicRegistry.evaluateInput(node, "max", ctx));
+                int min = TypeConverter.toInt(NodeLogicRegistry.evaluateInput(node, "min", ctx));
+                int max = TypeConverter.toInt(NodeLogicRegistry.evaluateInput(node, "max", ctx));
                 if (max < min) {
                     int temp = max;
                     max = min;

@@ -35,7 +35,34 @@ public class NodeLogicRegistry {
         String type = input.get("type").getAsString();
 
         if (type.equals("value")) {
-            return input.has("value") ? input.get("value").getAsString() : null;
+            if (!input.has("value")) return null;
+            JsonElement val = input.get("value");
+            
+            if (ctx.formatVersion >= 2) {
+                if (val.isJsonPrimitive()) {
+                    var prim = val.getAsJsonPrimitive();
+                    if (prim.isNumber()) return prim.getAsDouble();
+                    if (prim.isBoolean()) return prim.getAsBoolean();
+                    return prim.getAsString();
+                } else if (val.isJsonArray()) {
+                    JsonArray arr = val.getAsJsonArray();
+                    java.util.List<Object> list = new java.util.ArrayList<>();
+                    for (JsonElement e : arr) {
+                        if (e.isJsonPrimitive()) {
+                            var p = e.getAsJsonPrimitive();
+                            if (p.isNumber()) list.add(p.getAsDouble());
+                            else if (p.isBoolean()) list.add(p.getAsBoolean());
+                            else list.add(p.getAsString());
+                        } else {
+                            list.add(e.toString());
+                        }
+                    }
+                    return list;
+                }
+                return val;
+            } else {
+                return val.getAsString();
+            }
         } else if (type.equals("link")) {
             String sourceId = input.get("nodeId").getAsString();
             String sourceSocket = input.get("socket").getAsString();

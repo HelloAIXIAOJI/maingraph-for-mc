@@ -17,6 +17,14 @@ public class ListContainsHandler implements NodeHandler {
             
             if (list.contains(item)) return true;
             
+            // 兜底逻辑：如果对象引用不同，尝试数值比较或字符串比较
+            if (item instanceof Number num) {
+                double dv = num.doubleValue();
+                for (Object o : list) {
+                    if (o instanceof Number on && on.doubleValue() == dv) return true;
+                }
+            }
+
             String itemStr = TypeConverter.toString(item);
             for (Object o : list) {
                 if (TypeConverter.toString(o).equals(itemStr)) return true;
