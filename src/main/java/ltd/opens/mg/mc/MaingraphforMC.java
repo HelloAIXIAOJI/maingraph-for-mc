@@ -206,7 +206,7 @@ public class MaingraphforMC {
                     JsonObject obj = JsonParser.parseString(data).getAsJsonObject();
                     long newVersion = (currentVersion == -1 ? 0 : currentVersion) + 1;
                     obj.addProperty("_version", newVersion);
-                    obj.addProperty("format_version", 2);
+                    obj.addProperty("format_version", 3);
                     
                     Files.writeString(dataFile, obj.toString());
                     

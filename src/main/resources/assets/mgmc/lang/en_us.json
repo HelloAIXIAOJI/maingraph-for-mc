@@ -106,6 +106,9 @@
   "node.mgmc.port.message": "Message",
   "node.mgmc.port.list": "List",
   "node.mgmc.port.index": "Index",
+  "node.mgmc.port.command": "Command",
+  "node.mgmc.port.effect": "Effect",
+  "node.mgmc.port.radius": "Radius",
   "node.mgmc.port.min": "Min",
   "node.mgmc.port.max": "Max",
   "node.mgmc.port.length": "Length",
@@ -198,8 +201,8 @@
   "gui.mgmc.blueprint_editor.save_confirm.discard": "Discard and Exit",
   "gui.mgmc.blueprint_editor.saved": "Saved!",
   "gui.mgmc.blueprint_editor.save_success": "Saved successfully!",
-  "gui.mgmc.blueprint_editor.auto_layout": "Arrange",
-  "gui.mgmc.blueprint_editor.layout_complete": "Layout complete!",
-  "gui.mgmc.blueprint_editor.search_hint": "Search nodes...",
-  "gui.mgmc.blueprint_editor.no_nodes_found": "No nodes found"
+  "gui.mgmc.blueprint_editor.auto_layout": "Auto Layout",
+  "gui.mgmc.blueprint_editor.layout_complete": "Layout Complete!",
+  "gui.mgmc.blueprint_editor.search_hint": "Search Nodes...",
+  "gui.mgmc.blueprint_editor.no_nodes_found": "No matching nodes found"
 }
