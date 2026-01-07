@@ -15,7 +15,6 @@ public class NodeRegistrar {
         registerVariables();
         registerLogic();
         registerStrings();
-        registerLists();
     }
 
     private static void registerEvents() {
@@ -225,70 +224,5 @@ public class NodeRegistrar {
     }
 
     private static void registerStrings() {
-    }
-
-    private static void registerLists() {
-        NodeRegistry.register(new NodeDefinition.Builder("get_list_item", "node.mgmc.get_list_item.name")
-            .category("node_category.mgmc.variable.list")
-            .color(0xFF44AA44)
-            .addInput("list", "node.mgmc.get_list_item.port.list", NodeDefinition.PortType.LIST, colorList)
-            .addInput("index", "node.mgmc.get_list_item.port.index", NodeDefinition.PortType.FLOAT, colorFloat, true, 0)
-            .addOutput("value", "node.mgmc.get_list_item.port.value", NodeDefinition.PortType.ANY, 0xFFAAAAAA)
-            .build());
-
-        NodeRegistry.register(new NodeDefinition.Builder("list_add", "node.mgmc.list_add.name")
-            .category("node_category.mgmc.variable.list")
-            .color(0xFF44AA44)
-            .addInput("list_in", "node.mgmc.port.list", NodeDefinition.PortType.LIST, colorList)
-            .addInput("item", "node.mgmc.port.value", NodeDefinition.PortType.ANY, 0xFFAAAAAA)
-            .addOutput("list_out", "node.mgmc.port.list", NodeDefinition.PortType.LIST, colorList)
-            .build());
-
-        NodeRegistry.register(new NodeDefinition.Builder("list_remove", "node.mgmc.list_remove.name")
-            .category("node_category.mgmc.variable.list")
-            .color(0xFF44AA44)
-            .addInput("list_in", "node.mgmc.port.list", NodeDefinition.PortType.LIST, colorList)
-            .addInput("index", "node.mgmc.port.index", NodeDefinition.PortType.FLOAT, colorFloat, true, 0)
-            .addOutput("list_out", "node.mgmc.port.list", NodeDefinition.PortType.LIST, colorList)
-            .build());
-
-        NodeRegistry.register(new NodeDefinition.Builder("list_length", "node.mgmc.list_length.name")
-            .category("node_category.mgmc.variable.list")
-            .color(0xFF44AA44)
-            .addInput("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, colorList)
-            .addOutput("length", "node.mgmc.port.length", NodeDefinition.PortType.FLOAT, colorFloat)
-            .build());
-
-        NodeRegistry.register(new NodeDefinition.Builder("list_contains", "node.mgmc.list_contains.name")
-            .category("node_category.mgmc.variable.list")
-            .color(0xFF44AA44)
-            .addInput("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, colorList)
-            .addInput("item", "node.mgmc.port.value", NodeDefinition.PortType.ANY, 0xFFAAAAAA)
-            .addOutput("result", "node.mgmc.port.condition", NodeDefinition.PortType.BOOLEAN, colorBoolean)
-            .build());
-
-        NodeRegistry.register(new NodeDefinition.Builder("list_set_item", "node.mgmc.list_set_item.name")
-            .category("node_category.mgmc.variable.list")
-            .color(0xFF44AA44)
-            .addInput("list_in", "node.mgmc.port.list", NodeDefinition.PortType.LIST, colorList)
-            .addInput("index", "node.mgmc.port.index", NodeDefinition.PortType.FLOAT, colorFloat, true, 0)
-            .addInput("value", "node.mgmc.port.value", NodeDefinition.PortType.ANY, 0xFFAAAAAA)
-            .addOutput("list_out", "node.mgmc.port.list", NodeDefinition.PortType.LIST, colorList)
-            .build());
-
-        NodeRegistry.register(new NodeDefinition.Builder("list_join", "node.mgmc.list_join.name")
-            .category("node_category.mgmc.variable.list")
-            .color(0xFF44AA44)
-            .addInput("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, colorList)
-            .addInput("delimiter", "node.mgmc.port.delimiter", NodeDefinition.PortType.STRING, colorString, true, ",")
-            .addOutput("string", "node.mgmc.port.output", NodeDefinition.PortType.STRING, colorString)
-            .build());
-            
-        NodeRegistry.register(new NodeDefinition.Builder("random_list_item", "node.mgmc.random_list_item.name")
-            .category("node_category.mgmc.variable.list")
-            .color(0xFF44AA44)
-            .addInput("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, colorList)
-            .addOutput("item", "node.mgmc.port.value", NodeDefinition.PortType.ANY, 0xFFAAAAAA)
-            .build());
     }
 }
