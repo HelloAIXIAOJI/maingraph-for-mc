@@ -300,13 +300,6 @@ public class NodeRegistrar {
     }
 
     private static void registerStrings() {
-        NodeRegistry.register(new NodeDefinition.Builder("string", "node.mgmc.string.name")
-            .category("node_category.mgmc.variable.string")
-            .color(colorString)
-            .addInput("value", "node.mgmc.port.value", NodeDefinition.PortType.STRING, colorString, true, "")
-            .addOutput("output", "node.mgmc.port.output", NodeDefinition.PortType.STRING, colorString)
-            .build());
-
         NodeRegistry.register(new NodeDefinition.Builder("string_concat", "node.mgmc.string_concat.name")
             .category("node_category.mgmc.variable.string")
             .color(colorString)

@@ -65,11 +65,11 @@
 - [x] `logic_xor` (异或)
 
 ### 2.5 变量与常量节点 (Variable Nodes) -> `VariableNodes.java`
-- [ ] `float` (浮点数常量)
-- [ ] `boolean` (布尔常量)
-- [ ] `string` (字符串常量)
-- [ ] `get_variable` (获取变量)
-- [ ] `set_variable` (设置变量)
+- [x] `float` (浮点数常量)
+- [x] `boolean` (布尔常量)
+- [x] `string` (字符串常量)
+- [x] `get_variable` (获取变量)
+- [x] `set_variable` (设置变量)
 
 ### 2.6 控制流节点 (Control Flow Nodes) -> `ControlFlowNodes.java`
 - [ ] `branch` (分支/If)

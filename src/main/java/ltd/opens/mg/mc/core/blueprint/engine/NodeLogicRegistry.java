@@ -151,11 +151,5 @@ public class NodeLogicRegistry {
         register("random_list_item", new RandomListItemHandler());
         
         // Comparison
-
-        // Logic Gates
-
-        register("string", new StringHandler());
-        register("get_variable", new GetVariableHandler());
-        register("set_variable", new SetVariableHandler());
     }
 }

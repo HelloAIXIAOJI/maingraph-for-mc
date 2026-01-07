@@ -3,6 +3,7 @@ package ltd.opens.mg.mc.core.blueprint;
 import ltd.opens.mg.mc.core.blueprint.nodes.EventNodes;
 import ltd.opens.mg.mc.core.blueprint.nodes.LogicNodes;
 import ltd.opens.mg.mc.core.blueprint.nodes.MathNodes;
+import ltd.opens.mg.mc.core.blueprint.nodes.VariableNodes;
 
 /**
  * 蓝图节点统一初始化入口
@@ -15,5 +16,6 @@ public class NodeInitializer {
         EventNodes.register();
         MathNodes.register();
         LogicNodes.register();
+        VariableNodes.register();
     }
 }
