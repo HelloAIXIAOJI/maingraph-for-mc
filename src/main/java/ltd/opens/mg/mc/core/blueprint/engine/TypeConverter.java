@@ -1,5 +1,7 @@
 package ltd.opens.mg.mc.core.blueprint.engine;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -12,11 +14,6 @@ public class TypeConverter {
 
     public static String toString(Object value) {
         if (value == null) return "";
-        if (value instanceof List) {
-            return ((List<?>) value).stream()
-                    .map(TypeConverter::toString)
-                    .collect(Collectors.joining("|"));
-        }
         return String.valueOf(value);
     }
 
@@ -49,28 +46,40 @@ public class TypeConverter {
 
     public static List<Object> toList(Object value) {
         if (value == null) return new ArrayList<>();
+        
+        // 1. 如果已经是 List，确保返回可变列表
         if (value instanceof List) {
             //noinspection unchecked
-            return (List<Object>) value;
+            return new ArrayList<>((List<Object>) value);
         }
         
-        String s = String.valueOf(value);
-        if (s.isEmpty()) return new ArrayList<>();
-        
-        List<Object> list = new ArrayList<>();
-        if (s.contains("|")) {
-            String[] parts = s.split("\\|");
-            for (String part : parts) {
-                // 简单的去引号处理，用于兼容旧的 item.contains("|") 逻辑
-                if (part.startsWith("\"") && part.endsWith("\"") && part.length() >= 2) {
-                    list.add(part.substring(1, part.length() - 1));
+        // 2. 处理 JsonArray (Gson)
+        if (value instanceof JsonArray array) {
+            List<Object> list = new ArrayList<>();
+            for (JsonElement element : array) {
+                if (element.isJsonPrimitive()) {
+                    var primitive = element.getAsJsonPrimitive();
+                    if (primitive.isString()) list.add(primitive.getAsString());
+                    else if (primitive.isNumber()) list.add(primitive.getAsNumber());
+                    else if (primitive.isBoolean()) list.add(primitive.getAsBoolean());
                 } else {
-                    list.add(part);
+                    list.add(element);
                 }
             }
-        } else {
-            list.add(s);
+            return list;
         }
+        
+        // 3. 处理字符串
+        if (value instanceof String s) {
+            if (s.isEmpty()) return new ArrayList<>();
+            List<Object> list = new ArrayList<>();
+            list.add(s);
+            return list;
+        }
+        
+        // 4. 其他任何对象，直接作为列表的唯一元素返回（关键修复：保留原始对象）
+        List<Object> list = new ArrayList<>();
+        list.add(value);
         return list;
     }
 

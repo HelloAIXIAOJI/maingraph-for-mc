@@ -583,7 +583,7 @@ public class NodeRegistrar {
             .color(0xFF44AA44)
             .addInput("list", "node.mgmc.get_list_item.port.list", NodeDefinition.PortType.LIST, colorList)
             .addInput("index", "node.mgmc.get_list_item.port.index", NodeDefinition.PortType.FLOAT, colorFloat, true, 0)
-            .addOutput("value", "node.mgmc.get_list_item.port.value", NodeDefinition.PortType.STRING, colorString)
+            .addOutput("value", "node.mgmc.get_list_item.port.value", NodeDefinition.PortType.ANY, 0xFFAAAAAA)
             .build());
 
         NodeRegistry.register(new NodeDefinition.Builder("list_add", "node.mgmc.list_add.name")

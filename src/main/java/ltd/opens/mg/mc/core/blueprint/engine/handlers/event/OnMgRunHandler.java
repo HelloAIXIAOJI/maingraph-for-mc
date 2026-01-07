@@ -5,15 +5,14 @@ import ltd.opens.mg.mc.core.blueprint.engine.NodeContext;
 import ltd.opens.mg.mc.core.blueprint.engine.NodeHandler;
 import ltd.opens.mg.mc.core.blueprint.engine.TypeConverter;
 
+import java.util.Arrays;
+
 public class OnMgRunHandler implements NodeHandler {
     @Override
     public Object getValue(JsonObject node, String pinId, NodeContext ctx) {
         if (pinId.equals("name")) return ctx.eventName;
         if (pinId.equals("parameters")) {
-            // Join args with a delimiter or return as a format that our list item node understands
-            // Since our engine currently passes around Strings, we'll use a simple comma-separated string 
-            // and have the list handler parse it.
-            return String.join("|", ctx.args);
+            return Arrays.asList(ctx.args);
         }
         if (pinId.equals("trigger_uuid")) {
             return ctx.triggerUuid != null ? ctx.triggerUuid : "";
