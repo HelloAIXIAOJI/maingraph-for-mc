@@ -40,6 +40,16 @@ public class MGMCNetwork {
             RenameBlueprintPayload.STREAM_CODEC,
             BlueprintNetworkHandler.Server::handleRename
         );
+        registrar.playToServer(
+            RequestMappingsPayload.TYPE,
+            RequestMappingsPayload.STREAM_CODEC,
+            BlueprintNetworkHandler.Server::handleRequestMappings
+        );
+        registrar.playToServer(
+            SaveMappingsPayload.TYPE,
+            SaveMappingsPayload.STREAM_CODEC,
+            BlueprintNetworkHandler.Server::handleSaveMappings
+        );
 
         // Server -> Client
         registrar.playToClient(
@@ -56,6 +66,11 @@ public class MGMCNetwork {
             SaveResultPayload.TYPE,
             SaveResultPayload.STREAM_CODEC,
             BlueprintNetworkHandler.Client::handleSaveResult
+        );
+        registrar.playToClient(
+            ResponseMappingsPayload.TYPE,
+            ResponseMappingsPayload.STREAM_CODEC,
+            BlueprintNetworkHandler.Client::handleResponseMappings
         );
     }
 }

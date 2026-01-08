@@ -2,9 +2,12 @@ package ltd.opens.mg.mc.network;
 
 import com.google.gson.JsonObject;
 import ltd.opens.mg.mc.MaingraphforMC;
+import ltd.opens.mg.mc.client.gui.screens.BlueprintMappingScreen;
+import ltd.opens.mg.mc.client.gui.screens.BlueprintSelectionForMappingScreen;
 import ltd.opens.mg.mc.client.gui.screens.BlueprintScreen;
 import ltd.opens.mg.mc.client.gui.screens.BlueprintSelectionScreen;
 import ltd.opens.mg.mc.network.payloads.*;
+import ltd.opens.mg.mc.core.blueprint.routing.BlueprintRouter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -97,6 +100,26 @@ public class BlueprintNetworkHandler {
             });
         }
 
+        public static void handleRequestMappings(final RequestMappingsPayload payload, final IPayloadContext context) {
+            context.enqueueWork(() -> {
+                if (context.player() instanceof ServerPlayer player) {
+                    if (!hasPermission(player)) return;
+                    context.reply(new ResponseMappingsPayload(BlueprintRouter.getFullRoutingTable()));
+                }
+            });
+        }
+
+        public static void handleSaveMappings(final SaveMappingsPayload payload, final IPayloadContext context) {
+            context.enqueueWork(() -> {
+                if (context.player() instanceof ServerPlayer player) {
+                    if (!hasPermission(player)) return;
+                    BlueprintRouter.updateAllMappings(payload.mappings());
+                    // 广播更新？目前先简单回复
+                    context.reply(new ResponseMappingsPayload(BlueprintRouter.getFullRoutingTable()));
+                }
+            });
+        }
+
         public static void handleRename(final RenameBlueprintPayload payload, final IPayloadContext context) {
             context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer player) {
@@ -119,6 +142,8 @@ public class BlueprintNetworkHandler {
             context.enqueueWork(() -> {
                 if (Minecraft.getInstance().screen instanceof BlueprintSelectionScreen selectionScreen) {
                     selectionScreen.updateListFromServer(payload.blueprints());
+                } else if (Minecraft.getInstance().screen instanceof BlueprintSelectionForMappingScreen mappingSelectionScreen) {
+                    mappingSelectionScreen.updateListFromServer(payload.blueprints());
                 }
             });
         }
@@ -135,6 +160,14 @@ public class BlueprintNetworkHandler {
             context.enqueueWork(() -> {
                 if (Minecraft.getInstance().screen instanceof BlueprintScreen screen) {
                     screen.onSaveResult(payload.success(), payload.message(), payload.newVersion());
+                }
+            });
+        }
+
+        public static void handleResponseMappings(final ResponseMappingsPayload payload, final IPayloadContext context) {
+            context.enqueueWork(() -> {
+                if (Minecraft.getInstance().screen instanceof BlueprintMappingScreen screen) {
+                    screen.updateMappingsFromServer(payload.mappings());
                 }
             });
         }

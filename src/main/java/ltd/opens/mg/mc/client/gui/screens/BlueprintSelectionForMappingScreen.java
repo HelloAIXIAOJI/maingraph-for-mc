@@ -1,0 +1,115 @@
+package ltd.opens.mg.mc.client.gui.screens;
+
+import ltd.opens.mg.mc.MaingraphforMCClient;
+import ltd.opens.mg.mc.network.payloads.RequestBlueprintListPayload;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
+import net.minecraft.client.input.MouseButtonEvent;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class BlueprintSelectionForMappingScreen extends Screen {
+    private final BlueprintMappingScreen parent;
+    private final String targetId;
+    private BlueprintList list;
+
+    public BlueprintSelectionForMappingScreen(BlueprintMappingScreen parent, String targetId) {
+        super(Component.translatable("gui.mgmc.mapping.select_blueprint.title"));
+        this.parent = parent;
+        this.targetId = targetId;
+    }
+
+    @Override
+    protected void init() {
+        this.list = new BlueprintList(this.minecraft, this.width, this.height - 60, 30, 24);
+        this.addRenderableWidget(this.list);
+
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.mgmc.mapping.select"), b -> {
+            if (this.list.getSelected() != null) {
+                parent.addMapping(targetId, this.list.getSelected().name);
+                Minecraft.getInstance().setScreen(parent);
+            }
+        }).bounds(this.width / 2 - 105, this.height - 25, 100, 20).build());
+
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.mgmc.mapping.cancel"), b -> {
+            Minecraft.getInstance().setScreen(parent);
+        }).bounds(this.width / 2 + 5, this.height - 25, 100, 20).build());
+
+        refreshList();
+    }
+
+    private void refreshList() {
+        this.list.clearEntries();
+        if (isRemoteServer()) {
+            if (Minecraft.getInstance().getConnection() != null) {
+                Minecraft.getInstance().getConnection().send(new ServerboundCustomPayloadPacket(new RequestBlueprintListPayload()));
+            }
+        } else {
+            try {
+                Path dir = MaingraphforMCClient.getBlueprintsDir();
+                if (Files.exists(dir)) {
+                    try (var stream = Files.list(dir)) {
+                        List<Path> files = stream.filter(p -> p.toString().endsWith(".json")).collect(Collectors.toList());
+                        for (Path file : files) {
+                            this.list.add(new BlueprintEntry(file.getFileName().toString()));
+                        }
+                    }
+                }
+            } catch (IOException ignored) {}
+        }
+    }
+
+    public void updateListFromServer(List<String> blueprints) {
+        this.list.clearEntries();
+        for (String name : blueprints) {
+            this.list.add(new BlueprintEntry(name));
+        }
+    }
+
+    private boolean isRemoteServer() {
+        return Minecraft.getInstance().getSingleplayerServer() == null;
+    }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 10, 0xFFFFFF);
+    }
+
+    class BlueprintList extends ObjectSelectionList<BlueprintEntry> {
+        public BlueprintList(Minecraft minecraft, int width, int height, int y, int itemHeight) {
+            super(minecraft, width, height, y, itemHeight);
+        }
+        public void add(BlueprintEntry entry) { super.addEntry(entry); }
+    }
+
+    class BlueprintEntry extends ObjectSelectionList.Entry<BlueprintEntry> {
+        final String name;
+        public BlueprintEntry(String name) { this.name = name; }
+        
+        @Override
+        public void renderContent(GuiGraphics guiGraphics, int index, int top, boolean isHovered, float partialTick) {
+            int y = this.getY();
+            if (y <= 0) y = top;
+            guiGraphics.drawString(font, name, this.getX() + 5, y + 5, 0xFFFFFFFF);
+        }
+        
+        @Override
+        public boolean mouseClicked(MouseButtonEvent event, boolean isDouble) {
+            list.setSelected(this);
+            return true;
+        }
+        
+        @Override
+        public Component getNarration() { return Component.literal(name); }
+    }
+}

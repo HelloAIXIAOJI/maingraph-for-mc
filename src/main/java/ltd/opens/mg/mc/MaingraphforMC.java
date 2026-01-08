@@ -13,6 +13,7 @@ import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 
 import ltd.opens.mg.mc.core.blueprint.engine.BlueprintEngine;
+import ltd.opens.mg.mc.core.blueprint.routing.BlueprintRouter;
 import net.minecraft.commands.Commands;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.network.chat.Component;
@@ -55,6 +56,7 @@ public class MaingraphforMC {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
+        BlueprintRouter.init();
         LOGGER.info("Maingraph for MC initialized.");
     }
 
@@ -282,6 +284,21 @@ public class MaingraphforMC {
             return all;
         }
 
+        public static java.util.List<JsonObject> getBlueprintsForId(ServerLevel level, String... ids) {
+            java.util.List<JsonObject> result = new java.util.ArrayList<>();
+            java.util.Set<String> processedPaths = new java.util.HashSet<>();
+            
+            for (String id : ids) {
+                for (String path : BlueprintRouter.getMappedBlueprints(id)) {
+                    if (processedPaths.add(path)) {
+                        JsonObject bp = getBlueprint(level, path);
+                        if (bp != null) result.add(bp);
+                    }
+                }
+            }
+            return result;
+        }
+
         @SubscribeEvent
         public void onServerTick(ServerTickEvent.Post event) {
             var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
@@ -305,7 +322,8 @@ public class MaingraphforMC {
                         try {
                             double speed = Math.sqrt(distSq) / 5.0; // Distance over 5 ticks
                             ServerLevel level = (ServerLevel) player.level();
-                            for (JsonObject blueprint : getAllBlueprints(level)) {
+                            // 精准路由：仅执行绑定到 global 或 players 的蓝图
+                            for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, BlueprintRouter.PLAYERS_ID)) {
                                 BlueprintEngine.execute(level, blueprint, "on_player_move", "", new String[0], 
                                     uuid.toString(), player.getName().getString(), x, y, z, speed);
                             }
@@ -329,7 +347,8 @@ public class MaingraphforMC {
                 String uuid = event.getPlayer().getUUID().toString();
                 String name = event.getPlayer().getName().getString();
                 var pos = event.getPos();
-                for (JsonObject blueprint : getAllBlueprints(level)) {
+                // 精准路由：执行 global 和该方块 ID 绑定的蓝图
+                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, blockId)) {
                     BlueprintEngine.execute(level, blueprint, "on_break_block", "", new String[0], 
                         uuid, name, pos.getX(), pos.getY(), pos.getZ(), 0.0, blockId, "", 0.0, "");
                 }
@@ -343,7 +362,8 @@ public class MaingraphforMC {
                 String uuid = player.getUUID().toString();
                 String name = player.getName().getString();
                 var pos = event.getPos();
-                for (JsonObject blueprint : getAllBlueprints(level)) {
+                // 精准路由：执行 global 和该方块 ID 绑定的蓝图
+                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, blockId)) {
                     BlueprintEngine.execute(level, blueprint, "on_place_block", "", new String[0], 
                         uuid, name, pos.getX(), pos.getY(), pos.getZ(), 0.0, blockId, "", 0.0, "");
                 }
@@ -357,7 +377,8 @@ public class MaingraphforMC {
                 String uuid = event.getEntity().getUUID().toString();
                 String name = event.getEntity().getName().getString();
                 var pos = event.getPos();
-                for (JsonObject blueprint : getAllBlueprints(level)) {
+                // 精准路由：执行 global 和该方块 ID 绑定的蓝图
+                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, blockId)) {
                     BlueprintEngine.execute(level, blueprint, "on_interact_block", "", new String[0], 
                         uuid, name, pos.getX(), pos.getY(), pos.getZ(), 0.0, blockId, "", 0.0, "");
                 }
@@ -370,7 +391,8 @@ public class MaingraphforMC {
                 String uuid = event.getEntity().getUUID().toString();
                 String name = event.getEntity().getName().getString();
                 var pos = event.getEntity().position();
-                for (JsonObject blueprint : getAllBlueprints(level)) {
+                // 精准路由：执行 global 和 players 绑定的蓝图
+                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, BlueprintRouter.PLAYERS_ID)) {
                     BlueprintEngine.execute(level, blueprint, "on_player_join", "", new String[0], 
                         uuid, name, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, "");
                 }
@@ -384,15 +406,18 @@ public class MaingraphforMC {
                 String victimName = event.getEntity().getName().getString();
                 String attackerUuid = event.getSource().getEntity() != null ? event.getSource().getEntity().getUUID().toString() : "";
                 var pos = event.getEntity().position();
+                String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(event.getEntity().getType()).toString();
 
                 if (event.getEntity() instanceof Player) {
-                    for (JsonObject blueprint : getAllBlueprints(level)) {
+                    // 精准路由：针对玩家的死亡事件
+                    for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, BlueprintRouter.PLAYERS_ID)) {
                         BlueprintEngine.execute(level, blueprint, "on_player_death", "", new String[0], 
                             victimUuid, victimName, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, attackerUuid);
                     }
                 }
 
-                for (JsonObject blueprint : getAllBlueprints(level)) {
+                // 精准路由：针对特定实体类型的死亡事件
+                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, entityId)) {
                     BlueprintEngine.execute(level, blueprint, "on_entity_death", "", new String[0], 
                         victimUuid, victimName, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, attackerUuid);
                 }
@@ -405,7 +430,8 @@ public class MaingraphforMC {
                 String uuid = event.getEntity().getUUID().toString();
                 String name = event.getEntity().getName().getString();
                 var pos = event.getEntity().position();
-                for (JsonObject blueprint : getAllBlueprints(level)) {
+                // 精准路由：执行 global 和 players 绑定的蓝图
+                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, BlueprintRouter.PLAYERS_ID)) {
                     BlueprintEngine.execute(level, blueprint, "on_player_respawn", "", new String[0], 
                         uuid, name, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, "");
                 }
@@ -415,22 +441,26 @@ public class MaingraphforMC {
         @SubscribeEvent
         public void onLivingDamage(LivingIncomingDamageEvent event) {
             if (event.getEntity().level() instanceof ServerLevel level) {
-                String victimUuid = event.getEntity().getUUID().toString();
-                String victimName = event.getEntity().getName().getString();
-                String attackerUuid = event.getSource().getEntity() != null ? event.getSource().getEntity().getUUID().toString() : "";
+                var victim = event.getEntity();
+                String victimUuid = victim.getUUID().toString();
+                String victimName = victim.getName().getString();
+                var attacker = event.getSource().getDirectEntity();
+                String attackerUuid = attacker != null ? attacker.getUUID().toString() : "";
+                String attackerName = attacker != null ? attacker.getName().getString() : "";
                 double amount = event.getAmount();
-                var pos = event.getEntity().position();
+                var pos = victim.position();
+                String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(victim.getType()).toString();
 
-                if (event.getEntity() instanceof Player) {
-                    for (JsonObject blueprint : getAllBlueprints(level)) {
-                        BlueprintEngine.execute(level, blueprint, "on_player_hurt", "", new String[0], 
-                            victimUuid, victimName, pos.x, pos.y, pos.z, 0.0, "", "", amount, attackerUuid);
-                    }
+                java.util.List<String> routingIds = new java.util.ArrayList<>();
+                routingIds.add(BlueprintRouter.GLOBAL_ID);
+                routingIds.add(entityId);
+                if (victim instanceof Player) {
+                    routingIds.add(BlueprintRouter.PLAYERS_ID);
                 }
 
-                for (JsonObject blueprint : getAllBlueprints(level)) {
-                    BlueprintEngine.execute(level, blueprint, "on_entity_hurt", "", new String[0], 
-                        victimUuid, victimName, pos.x, pos.y, pos.z, 0.0, "", "", amount, attackerUuid);
+                for (JsonObject blueprint : getBlueprintsForId(level, routingIds.toArray(new String[0]))) {
+                    BlueprintEngine.execute(level, blueprint, "on_entity_hurt", "", new String[0],
+                        victimUuid, victimName, pos.x, pos.y, pos.z, amount, "", attackerUuid, 0.0, attackerName);
                 }
             }
         }
@@ -442,7 +472,8 @@ public class MaingraphforMC {
                 String uuid = event.getEntity().getUUID().toString();
                 String name = event.getEntity().getName().getString();
                 var pos = event.getEntity().position();
-                for (JsonObject blueprint : getAllBlueprints(level)) {
+                // 精准路由：执行 global 和该物品 ID 绑定的蓝图
+                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, itemId)) {
                     BlueprintEngine.execute(level, blueprint, "on_use_item", "", new String[0], 
                         uuid, name, pos.x, pos.y, pos.z, 0.0, "", itemId, 0.0, "");
                 }
@@ -456,7 +487,8 @@ public class MaingraphforMC {
                 String attackerName = event.getEntity().getName().getString();
                 String victimUuid = event.getTarget().getUUID().toString();
                 var pos = event.getEntity().position();
-                for (JsonObject blueprint : getAllBlueprints(level)) {
+                // 精准路由：针对玩家的攻击事件
+                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, BlueprintRouter.PLAYERS_ID)) {
                     BlueprintEngine.execute(level, blueprint, "on_player_attack", "", new String[0], 
                         attackerUuid, attackerName, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, victimUuid);
                 }
@@ -469,7 +501,9 @@ public class MaingraphforMC {
                 String uuid = event.getEntity().getUUID().toString();
                 String name = event.getEntity().getName().getString();
                 var pos = event.getEntity().position();
-                for (JsonObject blueprint : getAllBlueprints(level)) {
+                String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(event.getEntity().getType()).toString();
+                // 精准路由：执行 global 和该实体 ID 绑定的蓝图
+                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, entityId)) {
                     BlueprintEngine.execute(level, blueprint, "on_entity_spawn", "", new String[0], 
                         uuid, name, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, "");
                 }
