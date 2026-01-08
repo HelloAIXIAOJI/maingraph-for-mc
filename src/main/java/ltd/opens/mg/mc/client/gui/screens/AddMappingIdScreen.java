@@ -181,32 +181,36 @@ public class AddMappingIdScreen extends Screen {
 
         @Override
         public void renderContent(GuiGraphics guiGraphics, int index, int top, boolean isHovered, float partialTick) {
-            int left = suggestionList.getRowLeft();
-            int width = suggestionList.getRowWidth();
-            int height = 25; // 使用构造函数中定义的固定行高
+            int left = this.getX();
+            int width = this.getWidth();
+            int height = this.getHeight();
+            int y = this.getY();
+            if (y <= 0) y = top;
             
             boolean isSelected = suggestionList.getSelected() == this;
             boolean isExists = existingIds.contains(info.id);
 
+            // 渲染背景和边框
             if (isSelected) {
-                guiGraphics.fill(left, top, left + width, top + height, 0x44FFFFFF);
-                guiGraphics.renderOutline(left, top, width, height, 0xFFFFAA00);
+                guiGraphics.fill(left, y, left + width, y + height, 0x44FFFFFF);
+                guiGraphics.renderOutline(left, y, width, height, 0xFFFFCC00);
             } else if (isHovered) {
-                guiGraphics.fill(left, top, left + width, top + height, 0x22FFFFFF);
+                guiGraphics.fill(left, y, left + width, y + height, 0x22FFFFFF);
+                guiGraphics.renderOutline(left, y, width, height, 0xFF888888);
             }
 
             // 绘制图标
             if (!info.icon.isEmpty()) {
-                guiGraphics.renderItem(info.icon, left + 2, top + 2);
+                guiGraphics.renderItem(info.icon, left + 5, y + 4);
             }
 
-            // 绘制文本
-            int textColor = isExists ? 0x888888 : 0xFFFFFF;
-            guiGraphics.drawString(font, info.name, left + 25, top + 2, textColor);
-            guiGraphics.drawString(font, info.id, left + 25, top + 12, 0x888888);
+            // 绘制文本 - 使用 0xFF 前缀确保 Alpha 通道正确
+            int textColor = isExists ? 0xFF888888 : (isSelected ? 0xFFFFCC00 : (isHovered ? 0xFFFFFFFF : 0xFFAAAAAA));
+            guiGraphics.drawString(font, info.name, left + 25, y + 4, textColor);
+            guiGraphics.drawString(font, info.id, left + 25, y + 14, 0xFF888888);
             
             if (isExists) {
-                guiGraphics.drawString(font, "✔", left + width - 15, top + 5, 0x55FF55);
+                guiGraphics.drawString(font, "✔", left + width - 15, y + 8, 0xFF55FF55);
             }
         }
 
