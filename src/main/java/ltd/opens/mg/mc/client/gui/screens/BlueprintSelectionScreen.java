@@ -105,7 +105,7 @@ public class BlueprintSelectionScreen extends Screen {
 
         // Mapping Button
         this.addRenderableWidget(Button.builder(Component.translatable("gui.mgmc.blueprint_selection.mapping"), b -> {
-            Minecraft.getInstance().setScreen(new BlueprintMappingScreen());
+            Minecraft.getInstance().setScreen(new BlueprintMappingScreen(this));
         }).bounds(this.width - 120, 10, 50, 20).build());
 
         // About Button (Top-Right)

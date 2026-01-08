@@ -1,5 +1,6 @@
 package ltd.opens.mg.mc.client.gui.screens;
 
+import ltd.opens.mg.mc.client.utils.IdMetadataHelper;
 import ltd.opens.mg.mc.core.blueprint.routing.BlueprintRouter;
 import ltd.opens.mg.mc.network.payloads.RequestMappingsPayload;
 import ltd.opens.mg.mc.network.payloads.SaveMappingsPayload;
@@ -7,19 +8,25 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ObjectSelectionList;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
+import net.minecraft.world.item.ItemStack;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class BlueprintMappingScreen extends Screen {
+    private final Screen parent;
     private final Map<String, Set<String>> workingMappings = new HashMap<>();
     private IdList idList;
     private BlueprintSelectionList blueprintList;
-    private EditBox idInput;
     private String selectedId = null;
 
     // 右键菜单状态
@@ -28,8 +35,14 @@ public class BlueprintMappingScreen extends Screen {
     private String contextMenuId = null;
     private String contextMenuBlueprint = null;
 
-    public BlueprintMappingScreen() {
+    public BlueprintMappingScreen(Screen parent) {
         super(Component.translatable("gui.mgmc.mapping.title"));
+        this.parent = parent;
+    }
+
+    @Override
+    public void onClose() {
+        this.minecraft.setScreen(this.parent);
     }
 
     @Override
@@ -44,9 +57,20 @@ public class BlueprintMappingScreen extends Screen {
         int listHeight = this.height - 120;
 
         // ID 列表 (左侧)
-        this.idList = new IdList(this.minecraft, sidePanelWidth, listHeight, 40, 20);
+        this.idList = new IdList(this.minecraft, sidePanelWidth, listHeight, 40, 25);
         this.idList.setX(10);
         this.addRenderableWidget(this.idList);
+
+        // 添加 ID 按钮 (+)
+        this.addRenderableWidget(Button.builder(Component.literal("+"), b -> {
+            Minecraft.getInstance().setScreen(new AddMappingIdScreen(this, new ArrayList<>(workingMappings.keySet()), id -> {
+                if (!workingMappings.containsKey(id)) {
+                    workingMappings.put(id, new HashSet<>());
+                    refreshIdList();
+                    selectId(id);
+                }
+            }));
+        }).bounds(10 + sidePanelWidth - 25, 15, 20, 20).build());
 
         // 蓝图列表 (右侧)
         this.blueprintList = new BlueprintSelectionList(this.minecraft, mainPanelWidth, listHeight, 40, 20);
@@ -55,22 +79,6 @@ public class BlueprintMappingScreen extends Screen {
 
         // 底部控制区起始 Y
         int controlsY = this.height - 65;
-
-        // ID 输入框
-        int idInputWidth = sidePanelWidth - 65;
-        this.idInput = new EditBox(this.font, 10, controlsY, idInputWidth, 20, Component.literal("ID"));
-        this.idInput.setHint(Component.translatable("gui.mgmc.mapping.id_hint"));
-        this.addRenderableWidget(this.idInput);
-
-        // 添加 ID 按钮 (紧跟在输入框后面)
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.mgmc.mapping.add_id"), b -> {
-            String id = this.idInput.getValue().trim();
-            if (!id.isEmpty() && !workingMappings.containsKey(id)) {
-                workingMappings.put(id, new HashSet<>());
-                refreshIdList();
-                this.idInput.setValue("");
-            }
-        }).bounds(10 + idInputWidth + 5, controlsY, 60, 20).build());
 
         // 添加蓝图按钮 (放在右侧列表下方，也就是 sidePanelWidth + 20 处)
         this.addRenderableWidget(Button.builder(Component.translatable("gui.mgmc.mapping.add_blueprint"), b -> {
@@ -176,8 +184,8 @@ public class BlueprintMappingScreen extends Screen {
     private void renderContextMenu(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int x = (int)menuX;
         int y = (int)menuY;
-        int w = 100;
-        int h = 20; // 目前只有一个选项
+        int w = 120; // 稍微加宽一点
+        int h = 20;
 
         if (x + w > this.width) x -= w;
         if (y + h > this.height) y -= h;
@@ -186,11 +194,24 @@ public class BlueprintMappingScreen extends Screen {
         guiGraphics.renderOutline(x, y, w, h, 0xFFFFFFFF);
 
         // 删除/移除 选项
+        boolean isBuiltIn = contextMenuId != null && (contextMenuId.equals(BlueprintRouter.GLOBAL_ID) || contextMenuId.equals(BlueprintRouter.PLAYERS_ID));
         boolean hover = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
-        if (hover) guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF404040);
+        
+        if (hover && !isBuiltIn) {
+            guiGraphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF404040);
+        }
         
         String label = contextMenuId != null ? "gui.mgmc.mapping.delete_id" : "gui.mgmc.mapping.remove_mapping";
-        guiGraphics.drawString(font, Component.translatable(label), x + 10, y + 6, 0xFFFF5555);
+        int textColor = isBuiltIn ? 0x888888 : 0xFFFF5555;
+        guiGraphics.drawString(font, Component.translatable(label), x + 10, y + 6, textColor, false);
+        
+        if (isBuiltIn && hover) {
+            Component text = Component.translatable("gui.mgmc.mapping.built_in_no_delete");
+            int textWidth = font.width(text);
+            guiGraphics.fill(mouseX + 10, mouseY - 15, mouseX + 10 + textWidth + 10, mouseY + 5, 0xAA000000);
+            guiGraphics.renderOutline(mouseX + 10, mouseY - 15, textWidth + 10, 20, 0xFFFFFFFF);
+            guiGraphics.drawString(font, text, mouseX + 15, mouseY - 10, 0xFFFFFFFF);
+        }
     }
 
     @Override
@@ -198,7 +219,7 @@ public class BlueprintMappingScreen extends Screen {
         if (showMenu) {
             int x = (int)menuX;
             int y = (int)menuY;
-            int w = 100;
+            int w = 120;
             if (x + w > this.width) x -= w;
             if (y + 20 > this.height) y -= 20;
 
@@ -255,25 +276,35 @@ public class BlueprintMappingScreen extends Screen {
 
         @Override
         public void renderContent(GuiGraphics guiGraphics, int index, int top, boolean isHovered, float partialTick) {
-            int entryWidth = this.getWidth();
-            int entryLeft = this.getX();
-            int entryHeight = this.getHeight();
+            int left = this.getX();
+            int width = this.getWidth();
+            int height = this.getHeight();
             int y = this.getY();
             if (y <= 0) y = top;
 
             boolean isSelected = selectedId != null && selectedId.equals(id);
+            IdMetadataHelper.IdInfo info = IdMetadataHelper.getInfo(id);
 
             // 渲染背景和边框
             if (isSelected) {
-                guiGraphics.fill(entryLeft, y, entryLeft + entryWidth, y + entryHeight, 0x44FFFFFF);
-                guiGraphics.renderOutline(entryLeft, y, entryWidth, entryHeight, 0xFFFFCC00);
+                guiGraphics.fill(left, y, left + width, y + height, 0x44FFFFFF);
+                guiGraphics.renderOutline(left, y, width, height, 0xFFFFCC00);
             } else if (isHovered) {
-                guiGraphics.fill(entryLeft, y, entryLeft + entryWidth, y + entryHeight, 0x22FFFFFF);
-                guiGraphics.renderOutline(entryLeft, y, entryWidth, entryHeight, 0xFF888888);
+                guiGraphics.fill(left, y, left + width, y + height, 0x22FFFFFF);
+                guiGraphics.renderOutline(left, y, width, height, 0xFF888888);
             }
 
-            int color = isSelected ? 0xFFFFCC00 : (isHovered ? 0xFFFFFFFF : 0xFFAAAAAA);
-            guiGraphics.drawString(font, id, entryLeft + 5, y + (entryHeight - 8) / 2, color);
+            // 渲染图标
+            if (!info.icon.isEmpty()) {
+                guiGraphics.renderItem(info.icon, left + 5, y + 4);
+            }
+
+            int color = isSelected ? 0xFFFFCC00 : (isHovered ? 0xFFFFFFFF : (info.isBuiltIn ? 0xFF888888 : 0xFFAAAAAA));
+            
+            // 渲染显示名称
+            guiGraphics.drawString(font, info.name, left + 25, y + 4, color);
+            // 渲染 ID
+            guiGraphics.drawString(font, info.id, left + 25, y + 14, 0x888888);
         }
 
         @Override
@@ -326,26 +357,26 @@ public class BlueprintMappingScreen extends Screen {
 
         @Override
         public void renderContent(GuiGraphics guiGraphics, int index, int top, boolean isHovered, float partialTick) {
-            int entryWidth = this.getWidth();
-            int entryLeft = this.getX();
-            int entryHeight = this.getHeight();
+            int left = this.getX();
+            int width = this.getWidth();
+            int height = this.getHeight();
             int y = this.getY();
             if (y <= 0) y = top;
 
             // 渲染背景
             if (isHovered) {
-                guiGraphics.fill(entryLeft, y, entryLeft + entryWidth, y + entryHeight, 0x22FFFFFF);
-                guiGraphics.renderOutline(entryLeft, y, entryWidth, entryHeight, 0xFF888888);
+                guiGraphics.fill(left, y, left + width, y + height, 0x22FFFFFF);
+                guiGraphics.renderOutline(left, y, width, height, 0xFF888888);
             }
 
             int color = isHovered ? 0xFFFFFFFF : 0xFFAAAAAA;
-            guiGraphics.drawString(font, blueprintPath, entryLeft + 5, y + (entryHeight - 8) / 2, color);
+            guiGraphics.drawString(font, blueprintPath, left + 5, y + (height - 8) / 2, color);
             
             // 删除按钮 (X)
             int xBtnWidth = 20;
-            int xBtnX = entryLeft + entryWidth - xBtnWidth;
+            int xBtnX = left + width - xBtnWidth;
             // 简化悬停显示：只要条目被悬停，就显示浅红色的 X
-            guiGraphics.drawString(font, "X", xBtnX + 5, y + (entryHeight - 8) / 2, isHovered ? 0xFFFF5555 : 0x44FF5555);
+            guiGraphics.drawString(font, "X", xBtnX + 5, y + (height - 8) / 2, isHovered ? 0xFFFF5555 : 0x44FF5555);
         }
 
         @Override
@@ -355,16 +386,19 @@ public class BlueprintMappingScreen extends Screen {
             int xBtnWidth = 20;
             int xBtnX = entryLeft + entryWidth - xBtnWidth;
             
+            double mouseX = event.x();
+            double mouseY = event.y();
+
             if (event.buttonInfo().button() == 1) { // 右键
                 contextMenuId = null;
                 contextMenuBlueprint = blueprintPath;
-                menuX = event.x();
-                menuY = event.y();
+                menuX = mouseX;
+                menuY = mouseY;
                 showMenu = true;
                 return true;
             }
 
-            if (event.x() >= xBtnX) {
+            if (mouseX >= xBtnX) {
                 if (selectedId != null && workingMappings.containsKey(selectedId)) {
                     workingMappings.get(selectedId).remove(blueprintPath);
                     selectId(selectedId);
