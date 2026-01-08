@@ -103,8 +103,10 @@ public class AddMappingIdScreen extends Screen {
             this.errorTicks = 60;
             return;
         }
-        // 关键修复：在切换前强制移除焦点，防止 EditBox 触发二次 blur
-        this.setFocused(null);
+        // 关键修复：仅在当前确实拥有焦点时才尝试清除，防止重复 blur 触发 IllegalStateException
+        if (this.getFocused() != null) {
+            this.setFocused(null);
+        }
         onSelect.accept(id);
         this.onClose();
     }
@@ -142,6 +144,9 @@ public class AddMappingIdScreen extends Screen {
     public boolean keyPressed(KeyEvent event) {
         int keyCode = event.key();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            if (this.getFocused() != null) {
+                this.setFocused(null);
+            }
             this.onClose();
             return true;
         }

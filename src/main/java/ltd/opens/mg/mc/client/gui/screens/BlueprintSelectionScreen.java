@@ -64,6 +64,7 @@ public class BlueprintSelectionScreen extends Screen {
             if (!name.isEmpty()) {
                 if (!name.endsWith(".json")) name += ".json";
                 
+                this.setFocused(null);
                 if (isRemoteServer()) {
                     Minecraft.getInstance().setScreen(new BlueprintScreen(name));
                 } else {
@@ -85,6 +86,7 @@ public class BlueprintSelectionScreen extends Screen {
         this.openButton = Button.builder(Component.translatable("gui.mgmc.blueprint_selection.open"), b -> {
             if (this.list.getSelected() != null) {
                 BlueprintEntry entry = this.list.getSelected();
+                this.setFocused(null);
                 if (entry.path != null) {
                     Minecraft.getInstance().setScreen(new BlueprintScreen(entry.path));
                 } else {
@@ -96,6 +98,7 @@ public class BlueprintSelectionScreen extends Screen {
         this.addRenderableWidget(this.openButton);
         
         this.addRenderableWidget(Button.builder(Component.translatable("gui.mgmc.blueprint_selection.back"), b -> {
+            this.setFocused(null);
             Minecraft.getInstance().setScreen(null);
         }).bounds(startX + buttonWidth + spacing, buttonY, buttonWidth, buttonHeight).build());
         
@@ -105,11 +108,13 @@ public class BlueprintSelectionScreen extends Screen {
 
         // Mapping Button
         this.addRenderableWidget(Button.builder(Component.translatable("gui.mgmc.blueprint_selection.mapping"), b -> {
+            this.setFocused(null);
             Minecraft.getInstance().setScreen(new BlueprintMappingScreen(this));
         }).bounds(this.width - 120, 10, 50, 20).build());
 
         // About Button (Top-Right)
         this.addRenderableWidget(Button.builder(Component.translatable("gui.mgmc.blueprint_selection.about"), b -> {
+            this.setFocused(null);
             Minecraft.getInstance().setScreen(new AboutScreen(this));
         }).bounds(this.width - 60, 10, 50, 20).build());
 
@@ -279,6 +284,9 @@ public class BlueprintSelectionScreen extends Screen {
         }
         isRenaming = false;
         renameBox.setVisible(false);
+        if (this.getFocused() == this.renameBox) {
+            this.setFocused(null);
+        }
     }
 
     private void deleteBlueprint() {
@@ -409,6 +417,7 @@ public class BlueprintSelectionScreen extends Screen {
             long now = System.currentTimeMillis();
             if (now - lastClickTime < 250L) {
                 // Double click
+                BlueprintSelectionScreen.this.setFocused(null);
                 if (this.path != null) {
                     Minecraft.getInstance().setScreen(new BlueprintScreen(this.path));
                 } else {
