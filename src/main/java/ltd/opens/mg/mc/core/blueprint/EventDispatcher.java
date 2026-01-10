@@ -72,13 +72,23 @@ public class EventDispatcher {
 
         // 获取 Level (通常事件都能拿到 Level)
         Level level = getLevelFromEvent(event);
-        if (!(level instanceof ServerLevel serverLevel)) return;
+        if (!(level instanceof ServerLevel serverLevel)) {
+            // 使用 debug 级别记录，生产环境默认不显示
+            MaingraphforMC.LOGGER.debug("MGMC: Failed to get ServerLevel for event: {}", concreteClass.getName());
+            return;
+        }
 
         for (NodeDefinition def : defs) {
             EventMetadata metadata = (EventMetadata) def.properties().get("event_metadata");
             if (metadata == null) continue;
 
-            String routingId = metadata.routingIdExtractor().apply(event);
+            String routingId = null;
+            try {
+                routingId = metadata.routingIdExtractor().apply(event);
+            } catch (Exception e) {
+                MaingraphforMC.LOGGER.error("MGMC: Error extracting routing ID for node " + def.id(), e);
+            }
+            
             if (routingId == null) continue;
 
             // 收集所有可能的 ID
@@ -101,7 +111,12 @@ public class EventDispatcher {
 
             // 构造 Context
             NodeContext.Builder contextBuilder = new NodeContext.Builder(serverLevel);
-            metadata.contextPopulator().accept(event, contextBuilder);
+            try {
+                metadata.contextPopulator().accept(event, contextBuilder);
+            } catch (Exception e) {
+                MaingraphforMC.LOGGER.error("MGMC: Error populating context for node " + def.id(), e);
+                continue;
+            }
             
             // 执行蓝图
             for (JsonObject blueprint : blueprints) {
@@ -112,9 +127,12 @@ public class EventDispatcher {
 
     private static Player getPlayerFromEvent(Event event) {
         if (event instanceof net.neoforged.neoforge.event.entity.player.PlayerEvent pe) return pe.getEntity();
-        if (event instanceof net.neoforged.neoforge.event.level.BlockEvent.BreakEvent be) return be.getPlayer();
-        if (event instanceof net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent epe) {
-            if (epe.getEntity() instanceof Player p) return p;
+        if (event instanceof net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent iepe) return iepe.getPlayer();
+        if (event instanceof net.neoforged.neoforge.event.level.BlockEvent be) {
+            if (be instanceof net.neoforged.neoforge.event.level.BlockEvent.BreakEvent bre) return bre.getPlayer();
+            if (be instanceof net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent epe) {
+                if (epe.getEntity() instanceof Player p) return p;
+            }
         }
         if (event instanceof net.neoforged.neoforge.event.entity.living.LivingEvent le) {
             if (le.getEntity() instanceof Player p) return p;
@@ -125,6 +143,9 @@ public class EventDispatcher {
     private static Level getLevelFromEvent(Event event) {
         if (event instanceof net.neoforged.neoforge.event.level.LevelEvent le) {
             if (le.getLevel() instanceof Level l) return l;
+        }
+        if (event instanceof net.neoforged.neoforge.event.level.BlockEvent be) {
+            if (be.getLevel() instanceof Level l) return l;
         }
         if (event instanceof net.neoforged.neoforge.event.entity.EntityEvent ee) return ee.getEntity().level();
         if (event instanceof net.neoforged.neoforge.event.tick.PlayerTickEvent pte) return pte.getEntity().level();
