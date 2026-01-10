@@ -5,7 +5,6 @@ import ltd.opens.mg.mc.core.blueprint.NodeHelper;
 import ltd.opens.mg.mc.core.blueprint.NodePorts;
 import ltd.opens.mg.mc.core.blueprint.NodeThemes;
 import ltd.opens.mg.mc.core.blueprint.routing.BlueprintRouter;
-import ltd.opens.mg.mc.core.blueprint.engine.NodeContext;
 import ltd.opens.mg.mc.core.blueprint.events.RegisterMGMCNodesEvent;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -313,7 +312,7 @@ public class EventNodes {
             .execOut()
             .output(NodePorts.ITEM_ID, "node.mgmc.port.item_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
             .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
-            .registerEvent(net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent.class, (e, b) -> {
+            .registerEvent(net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent.Post.class, (e, b) -> {
                 b.triggerUuid(e.getPlayer().getUUID().toString())
                  .triggerName(e.getPlayer().getName().getString())
                  .triggerItemId(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(e.getItemEntity().getItem().getItem()).toString());

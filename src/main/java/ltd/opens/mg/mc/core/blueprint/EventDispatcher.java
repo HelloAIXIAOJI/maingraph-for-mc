@@ -8,7 +8,6 @@ import ltd.opens.mg.mc.core.blueprint.routing.BlueprintRouter;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.Event;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.*;
@@ -61,7 +60,9 @@ public class EventDispatcher {
             if (routingId == null) continue;
 
             // 获取绑定的蓝图
-            List<JsonObject> blueprints = MaingraphforMC.BlueprintServerHandler.getBlueprintsForId(serverLevel, BlueprintRouter.GLOBAL_ID, routingId);
+            var manager = MaingraphforMC.getServerManager();
+            if (manager == null) continue;
+            List<JsonObject> blueprints = manager.getBlueprintsForId(serverLevel, BlueprintRouter.GLOBAL_ID, routingId);
             if (blueprints.isEmpty()) continue;
 
             // 构造 Context

@@ -10,39 +10,28 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
-import ltd.opens.mg.mc.core.blueprint.engine.BlueprintEngine;
+import ltd.opens.mg.mc.core.blueprint.BlueprintManager;
 import ltd.opens.mg.mc.core.blueprint.routing.BlueprintRouter;
+import ltd.opens.mg.mc.core.blueprint.engine.BlueprintEngine;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.CommandSourceStack;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.google.gson.JsonObject;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.core.registries.BuiltInRegistries;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import net.minecraft.commands.CommandSourceStack;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.api.distmarker.Dist;
 
 @Mod(MaingraphforMC.MODID)
 public class MaingraphforMC {
     public static final String MODID = "mgmc";
     public static final Logger LOGGER = LogUtils.getLogger();
+
+    private static BlueprintManager serverManager;
+    private static BlueprintRouter clientRouter;
 
     public MaingraphforMC(IEventBus modEventBus, ModContainer modContainer) {
         // 显式初始化节点注册表，通过事件驱动方式通知各模块注册节点
@@ -52,23 +41,39 @@ public class MaingraphforMC {
         modEventBus.addListener(ltd.opens.mg.mc.network.MGMCNetwork::register);
 
         NeoForge.EVENT_BUS.register(this);
-        NeoForge.EVENT_BUS.register(new BlueprintServerHandler());
+
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            clientRouter = new BlueprintRouter();
+        }
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        ltd.opens.mg.mc.core.blueprint.routing.BlueprintRouter.init();
         ltd.opens.mg.mc.core.blueprint.EventDispatcher.init();
         LOGGER.info("Maingraph for MC initialized.");
     }
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        // 当服务器启动时，加载对应世界的路由表
-        BlueprintRouter.load(event.getServer().overworld());
-        LOGGER.info("MGMC: Routing table loaded for world.");
+        serverManager = new BlueprintManager();
+        serverManager.getRouter().load(event.getServer().overworld());
+        LOGGER.info("MGMC: Blueprint manager initialized and routing table loaded for world.");
+    }
+
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        serverManager = null;
+        LOGGER.info("MGMC: Blueprint manager cleared.");
+    }
+
+    public static BlueprintManager getServerManager() {
+        return serverManager;
+    }
+
+    public static BlueprintRouter getClientRouter() {
+        return clientRouter;
     }
 
     @SubscribeEvent
@@ -79,6 +84,7 @@ public class MaingraphforMC {
                 .then(Commands.argument("event", StringArgumentType.word())
                     .then(Commands.argument("args", StringArgumentType.greedyString())
                         .executes(context -> {
+                            if (serverManager == null) return 0;
                             String blueprintName = StringArgumentType.getString(context, "blueprint");
                             String eventName = StringArgumentType.getString(context, "event");
                             String argsStr = StringArgumentType.getString(context, "args");
@@ -91,7 +97,7 @@ public class MaingraphforMC {
                             var pos = source.getPosition();
                             
                             try {
-                                JsonObject blueprint = BlueprintServerHandler.getBlueprint(level, blueprintName);
+                                JsonObject blueprint = serverManager.getBlueprint(level, blueprintName);
                                 if (blueprint != null) {
                                     // 统一使用带命名空间的事件 ID 或在 Engine 中处理
                                     BlueprintEngine.execute(level, blueprint, "mgmc:on_mgrun", eventName, args, triggerUuid, triggerName, pos.x, pos.y, pos.z, 0.0);
@@ -105,6 +111,7 @@ public class MaingraphforMC {
                         })
                     )
                     .executes(context -> {
+                        if (serverManager == null) return 0;
                         String blueprintName = StringArgumentType.getString(context, "blueprint");
                         String eventName = StringArgumentType.getString(context, "event");
                         CommandSourceStack source = context.getSource();
@@ -113,7 +120,7 @@ public class MaingraphforMC {
                         String triggerName = source.getTextName();
                         var pos = source.getPosition();
                         try {
-                            JsonObject blueprint = BlueprintServerHandler.getBlueprint(level, blueprintName);
+                            JsonObject blueprint = serverManager.getBlueprint(level, blueprintName);
                             if (blueprint != null) {
                                 BlueprintEngine.execute(level, blueprint, "mgmc:on_mgrun", eventName, new String[0], triggerUuid, triggerName, pos.x, pos.y, pos.z, 0.0);
                             } else {
@@ -127,187 +134,5 @@ public class MaingraphforMC {
                 )
             )
         );
-    }
-
-    public static class BlueprintServerHandler {
-        private static final java.util.concurrent.ExecutorService IO_EXECUTOR = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "MGMC-IO-Thread");
-            t.setDaemon(true);
-            return t;
-        });
-        
-        private static class CachedBlueprint {
-            JsonObject json;
-            long lastModified;
-            long version;
-            CachedBlueprint(JsonObject json, long lastModified, long version) {
-                this.json = json;
-                this.lastModified = lastModified;
-                this.version = version;
-            }
-        }
-        
-        private static final java.util.Map<String, CachedBlueprint> blueprintCache = new java.util.HashMap<>();
-        private static final long CACHE_REFRESH_INTERVAL = 1000; // 1 second
-
-        private static boolean isValidFileName(String name) {
-            if (name == null || name.isEmpty()) return false;
-            // 严禁路径穿越和非法字符
-            return !name.contains("..") && !name.contains("/") && !name.contains("\\") && name.matches("^[a-zA-Z0-9_\\-\\.]+$");
-        }
-
-        public static Path getBlueprintsDir(ServerLevel level) {
-            Path dir = level.getServer().getWorldPath(LevelResource.ROOT).resolve("mgmc_blueprints");
-            if (!Files.exists(dir)) {
-                try {
-                    Files.createDirectories(dir);
-                } catch (Exception e) {}
-            }
-            return dir;
-        }
-
-        public static JsonObject getBlueprint(ServerLevel level, String name) {
-            if (!isValidFileName(name)) return null;
-            try {
-                if (!name.endsWith(".json")) name += ".json";
-                Path dataFile = getBlueprintsDir(level).resolve(name);
-                if (Files.exists(dataFile)) {
-                    long lastModified = Files.getLastModifiedTime(dataFile).toMillis();
-                    CachedBlueprint cached = blueprintCache.get(name);
-                    if (cached == null || lastModified > cached.lastModified) {
-                        String json = Files.readString(dataFile);
-                        JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
-                        long version = 0;
-                    if (obj.has("_version") && obj.get("_version").isJsonPrimitive() && obj.get("_version").getAsJsonPrimitive().isNumber()) {
-                        version = obj.get("_version").getAsLong();
-                    }
-                        cached = new CachedBlueprint(obj, lastModified, version);
-                        blueprintCache.put(name, cached);
-                    }
-                    return cached.json;
-                }
-            } catch (Exception e) {}
-            return null;
-        }
-
-        public static long getBlueprintVersion(ServerLevel level, String name) {
-            if (!isValidFileName(name)) return -1;
-            if (!name.endsWith(".json")) name += ".json";
-            getBlueprint(level, name); // Ensure it's in cache
-            CachedBlueprint cached = blueprintCache.get(name);
-            return cached != null ? cached.version : -1;
-        }
-
-        public static java.util.concurrent.CompletableFuture<SaveResult> saveBlueprintAsync(ServerLevel level, String name, String data, long expectedVersion) {
-            if (!isValidFileName(name)) {
-                return java.util.concurrent.CompletableFuture.completedFuture(new SaveResult(false, "Invalid file name.", -1));
-            }
-            
-            return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-                try {
-                    String fileName = name.endsWith(".json") ? name : name + ".json";
-                    Path dataFile = getBlueprintsDir(level).resolve(fileName);
-                    
-                    long currentVersion = getBlueprintVersion(level, name);
-                    
-                    // Race condition check
-                    if (currentVersion != -1 && expectedVersion != -1 && currentVersion != expectedVersion) {
-                        return new SaveResult(false, "Race condition detected: blueprint has been modified by another user.", currentVersion);
-                    }
-
-                    JsonObject obj = JsonParser.parseString(data).getAsJsonObject();
-                    long newVersion = (currentVersion == -1 ? 0 : currentVersion) + 1;
-                    obj.addProperty("_version", newVersion);
-                    obj.addProperty("format_version", 3);
-                    
-                    Files.writeString(dataFile, obj.toString());
-                    
-                    // Update cache
-                    blueprintCache.put(fileName, new CachedBlueprint(obj, System.currentTimeMillis(), newVersion));
-                    lastAllBlueprintsRefresh = 0; 
-                    
-                    return new SaveResult(true, "Saved successfully.", newVersion);
-                } catch (Exception e) {
-                    return new SaveResult(false, "Save failed: " + e.getMessage(), -1);
-                }
-            }, IO_EXECUTOR);
-        }
-
-        public static SaveResult saveBlueprint(ServerLevel level, String name, String data, long expectedVersion) {
-            try {
-                return saveBlueprintAsync(level, name, data, expectedVersion).get(5, java.util.concurrent.TimeUnit.SECONDS);
-            } catch (Exception e) {
-                return new SaveResult(false, "Save timeout or error: " + e.getMessage(), -1);
-            }
-        }
-
-        public record SaveResult(boolean success, String message, long newVersion) {}
-
-        public static void deleteBlueprint(ServerLevel level, String name) {
-            if (!isValidFileName(name)) return;
-            try {
-                if (!name.endsWith(".json")) name += ".json";
-                Path dataFile = getBlueprintsDir(level).resolve(name);
-                Files.deleteIfExists(dataFile);
-                blueprintCache.remove(name);
-                lastAllBlueprintsRefresh = 0;
-            } catch (Exception e) {}
-        }
-
-        public static void renameBlueprint(ServerLevel level, String oldName, String newName) {
-            if (!isValidFileName(oldName) || !isValidFileName(newName)) return;
-            try {
-                if (!oldName.endsWith(".json")) oldName += ".json";
-                if (!newName.endsWith(".json")) newName += ".json";
-                Path oldFile = getBlueprintsDir(level).resolve(oldName);
-                Path newFile = getBlueprintsDir(level).resolve(newName);
-                if (Files.exists(oldFile)) {
-                    Files.move(oldFile, newFile);
-                    blueprintCache.remove(oldName);
-                    lastAllBlueprintsRefresh = 0;
-                }
-            } catch (Exception e) {}
-        }
-
-        private static java.util.List<JsonObject> allBlueprintsCache = new java.util.ArrayList<>();
-        private static long lastAllBlueprintsRefresh = 0;
-
-        public static java.util.Collection<JsonObject> getAllBlueprints(ServerLevel level) {
-            long now = System.currentTimeMillis();
-            if (now - lastAllBlueprintsRefresh < CACHE_REFRESH_INTERVAL) {
-                return allBlueprintsCache;
-            }
-
-            java.util.List<JsonObject> all = new java.util.ArrayList<>();
-            try {
-                Path dir = getBlueprintsDir(level);
-                try (var stream = Files.list(dir)) {
-                    stream.filter(p -> p.toString().endsWith(".json")).forEach(p -> {
-                        String name = p.getFileName().toString();
-                        JsonObject bp = getBlueprint(level, name);
-                        if (bp != null) all.add(bp);
-                    });
-                }
-                allBlueprintsCache = all;
-                lastAllBlueprintsRefresh = now;
-            } catch (Exception e) {}
-            return all;
-        }
-
-        public static java.util.List<JsonObject> getBlueprintsForId(ServerLevel level, String... ids) {
-            java.util.List<JsonObject> result = new java.util.ArrayList<>();
-            java.util.Set<String> processedPaths = new java.util.HashSet<>();
-            
-            for (String id : ids) {
-                for (String path : BlueprintRouter.getMappedBlueprints(id)) {
-                    if (processedPaths.add(path)) {
-                        JsonObject bp = getBlueprint(level, path);
-                        if (bp != null) result.add(bp);
-                    }
-                }
-            }
-            return result;
-        }
-
     }
 }
