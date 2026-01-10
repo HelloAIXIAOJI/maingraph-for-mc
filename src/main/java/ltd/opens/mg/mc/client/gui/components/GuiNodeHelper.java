@@ -2,16 +2,18 @@ package ltd.opens.mg.mc.client.gui.components;
 
 import ltd.opens.mg.mc.core.blueprint.NodeDefinition;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import java.util.List;
 
 public class GuiNodeHelper {
 
     public static void updateSize(GuiNode node, Font font) {
         // Calculate height
         int maxPorts = Math.max(node.inputs.size(), node.outputs.size());
-        boolean hasAddButton = node.typeId.equals("switch") || node.typeId.equals("string_combine");
+        
+        // 检查是否有配置底部交互按钮
+        String buttonLabel = (String) node.definition.properties().get("ui_button_label");
+        boolean hasAddButton = buttonLabel != null;
+        
         node.height = Math.max(40, node.headerHeight + 10 + maxPorts * 15 + (hasAddButton ? 25 : 5));
 
         // Calculate width
@@ -40,8 +42,7 @@ public class GuiNodeHelper {
         }
 
         if (hasAddButton) {
-            String btnKey = node.typeId.equals("switch") ? "node.mgmc.switch.add_branch" : "node.mgmc.string_combine.add_input";
-            float btnW = font.width(Component.translatable(btnKey)) + 20;
+            float btnW = font.width(Component.translatable(buttonLabel)) + 20;
             minWidth = Math.max(minWidth, btnW);
         }
 
@@ -101,7 +102,9 @@ public class GuiNodeHelper {
     }
 
     public static boolean isMouseOverAddButton(GuiNode node, double worldMouseX, double worldMouseY) {
-        if (!node.typeId.equals("switch") && !node.typeId.equals("string_combine")) return false;
+        String buttonLabel = (String) node.definition.properties().get("ui_button_label");
+        if (buttonLabel == null) return false;
+        
         int btnX = (int) node.x + 5;
         int btnY = (int) (node.y + node.height - 20);
         int btnW = (int) node.width - 10;

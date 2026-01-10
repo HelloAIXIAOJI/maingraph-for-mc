@@ -12,7 +12,8 @@ public record NodeDefinition(
     int color,
     List<PortDefinition> inputs,
     List<PortDefinition> outputs,
-    Map<String, Object> properties
+    Map<String, Object> properties,
+    String registeredBy
 ) {
     public static class Builder {
         private final String id;
@@ -22,10 +23,22 @@ public record NodeDefinition(
         private final List<PortDefinition> inputs = new ArrayList<>();
         private final List<PortDefinition> outputs = new ArrayList<>();
         private final Map<String, Object> properties = new HashMap<>();
+        private String registeredBy = "unknown";
 
         public Builder(String id, String name) {
             this.id = id;
             this.name = name;
+            try {
+                String activeNamespace = net.neoforged.fml.ModLoadingContext.get().getActiveNamespace();
+                if (activeNamespace != null && !activeNamespace.isEmpty()) {
+                    this.registeredBy = activeNamespace;
+                }
+            } catch (Throwable ignored) {}
+        }
+
+        public Builder registeredBy(String modid) {
+            this.registeredBy = modid;
+            return this;
         }
 
         public Builder category(String category) {
@@ -79,8 +92,16 @@ public record NodeDefinition(
             return addOutput(id, id, type, color);
         }
 
+        public List<PortDefinition> getInputs() {
+            return inputs;
+        }
+
+        public List<PortDefinition> getOutputs() {
+            return outputs;
+        }
+
         public NodeDefinition build() {
-            return new NodeDefinition(id, name, category, color, List.copyOf(inputs), List.copyOf(outputs), Map.copyOf(properties));
+            return new NodeDefinition(id, name, category, color, List.copyOf(inputs), List.copyOf(outputs), Map.copyOf(properties), registeredBy);
         }
     }
 

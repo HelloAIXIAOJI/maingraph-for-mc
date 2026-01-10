@@ -7,7 +7,6 @@ import ltd.opens.mg.mc.client.gui.screens.BlueprintSelectionForMappingScreen;
 import ltd.opens.mg.mc.client.gui.screens.BlueprintScreen;
 import ltd.opens.mg.mc.client.gui.screens.BlueprintSelectionScreen;
 import ltd.opens.mg.mc.network.payloads.*;
-import ltd.opens.mg.mc.core.blueprint.routing.BlueprintRouter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,14 +29,16 @@ public class BlueprintNetworkHandler {
                     if (!hasPermission(player)) {
                         return;
                     }
-                    var blueprints = MaingraphforMC.BlueprintServerHandler.getAllBlueprints((ServerLevel) player.level());
+                    var manager = MaingraphforMC.getServerManager();
+                    if (manager == null) return;
+                    var blueprints = manager.getAllBlueprints((ServerLevel) player.level());
                     java.util.List<String> names = blueprints.stream()
                             .map(bp -> bp.has("name") ? bp.get("name").getAsString() : "unknown")
                             .collect(Collectors.toList());
                     
                     // Fallback to filenames if name property is missing
                     if (names.isEmpty() || names.contains("unknown")) {
-                        try (var stream = java.nio.file.Files.list(MaingraphforMC.BlueprintServerHandler.getBlueprintsDir((ServerLevel) player.level()))) {
+                        try (var stream = java.nio.file.Files.list(manager.getBlueprintsDir((ServerLevel) player.level()))) {
                             names = stream.filter(p -> p.toString().endsWith(".json"))
                                     .map(p -> p.getFileName().toString())
                                     .collect(Collectors.toList());
@@ -55,9 +56,11 @@ public class BlueprintNetworkHandler {
                     if (!hasPermission(player)) {
                         return;
                     }
-                    JsonObject bp = MaingraphforMC.BlueprintServerHandler.getBlueprint((ServerLevel) player.level(), payload.name());
+                    var manager = MaingraphforMC.getServerManager();
+                    if (manager == null) return;
+                    JsonObject bp = manager.getBlueprint((ServerLevel) player.level(), payload.name());
                     if (bp != null) {
-                        long version = MaingraphforMC.BlueprintServerHandler.getBlueprintVersion((ServerLevel) player.level(), payload.name());
+                        long version = manager.getBlueprintVersion((ServerLevel) player.level(), payload.name());
                         context.reply(new ResponseBlueprintDataPayload(payload.name(), bp.toString(), version));
                     }
                 }
@@ -70,7 +73,9 @@ public class BlueprintNetworkHandler {
                     context.reply(new SaveResultPayload(false, "You do not have permission to save blueprints.", 0));
                     return;
                 }
-                MaingraphforMC.BlueprintServerHandler.saveBlueprintAsync(
+                var manager = MaingraphforMC.getServerManager();
+                if (manager == null) return;
+                manager.saveBlueprintAsync(
                         (ServerLevel) player.level(),
                         payload.name(),
                         payload.data(),
@@ -87,11 +92,13 @@ public class BlueprintNetworkHandler {
                     if (!hasPermission(player)) {
                         return;
                     }
-                    MaingraphforMC.BlueprintServerHandler.deleteBlueprint((ServerLevel) player.level(), payload.name());
+                    var manager = MaingraphforMC.getServerManager();
+                    if (manager == null) return;
+                    manager.deleteBlueprint((ServerLevel) player.level(), payload.name());
                     // Refresh list for all clients or just the sender?
                     // For simplicity, the client can request a refresh or we can broadcast.
                     // Usually, the client that deleted it will refresh its list.
-                    var blueprints = MaingraphforMC.BlueprintServerHandler.getAllBlueprints((ServerLevel) player.level());
+                    var blueprints = manager.getAllBlueprints((ServerLevel) player.level());
                     java.util.List<String> names = blueprints.stream()
                             .map(bp -> bp.has("name") ? bp.get("name").getAsString() : "unknown")
                             .collect(Collectors.toList());
@@ -104,7 +111,9 @@ public class BlueprintNetworkHandler {
             context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer player) {
                     if (!hasPermission(player)) return;
-                    context.reply(new ResponseMappingsPayload(BlueprintRouter.getFullRoutingTable()));
+                    var manager = MaingraphforMC.getServerManager();
+                    if (manager == null) return;
+                    context.reply(new ResponseMappingsPayload(manager.getRouter().getFullRoutingTable()));
                 }
             });
         }
@@ -113,9 +122,11 @@ public class BlueprintNetworkHandler {
             context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer player) {
                     if (!hasPermission(player)) return;
-                    BlueprintRouter.updateAllMappings(payload.mappings());
+                    var manager = MaingraphforMC.getServerManager();
+                    if (manager == null) return;
+                    manager.getRouter().updateAllMappings((ServerLevel) player.level(), payload.mappings());
                     // 广播更新？目前先简单回复
-                    context.reply(new ResponseMappingsPayload(BlueprintRouter.getFullRoutingTable()));
+                    context.reply(new ResponseMappingsPayload(manager.getRouter().getFullRoutingTable()));
                 }
             });
         }
@@ -126,8 +137,10 @@ public class BlueprintNetworkHandler {
                     if (!hasPermission(player)) {
                         return;
                     }
-                    MaingraphforMC.BlueprintServerHandler.renameBlueprint((ServerLevel) player.level(), payload.oldName(), payload.newName());
-                    var blueprints = MaingraphforMC.BlueprintServerHandler.getAllBlueprints((ServerLevel) player.level());
+                    var manager = MaingraphforMC.getServerManager();
+                    if (manager == null) return;
+                    manager.renameBlueprint((ServerLevel) player.level(), payload.oldName(), payload.newName());
+                    var blueprints = manager.getAllBlueprints((ServerLevel) player.level());
                     java.util.List<String> names = blueprints.stream()
                             .map(bp -> bp.has("name") ? bp.get("name").getAsString() : "unknown")
                             .collect(Collectors.toList());
@@ -166,6 +179,12 @@ public class BlueprintNetworkHandler {
 
         public static void handleResponseMappings(final ResponseMappingsPayload payload, final IPayloadContext context) {
             context.enqueueWork(() -> {
+                // 更新客户端内存中的路由表
+                var router = MaingraphforMC.getClientRouter();
+                if (router != null) {
+                    router.clientUpdateMappings(payload.mappings());
+                }
+                
                 if (Minecraft.getInstance().screen instanceof BlueprintMappingScreen screen) {
                     screen.updateMappingsFromServer(payload.mappings());
                 }

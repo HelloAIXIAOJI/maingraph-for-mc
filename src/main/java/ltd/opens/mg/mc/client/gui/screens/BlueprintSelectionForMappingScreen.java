@@ -114,7 +114,7 @@ public class BlueprintSelectionForMappingScreen extends Screen {
             int y = this.getY();
             if (y <= 0) y = top;
 
-            boolean isSelected = list.getSelected() == this;
+            boolean isSelected = BlueprintSelectionForMappingScreen.this.list.getSelected() == this;
 
             // 渲染背景和边框
             if (isSelected) {
@@ -131,7 +131,7 @@ public class BlueprintSelectionForMappingScreen extends Screen {
         
         @Override
         public boolean mouseClicked(MouseButtonEvent event, boolean isDouble) {
-            list.setSelected(this);
+            BlueprintSelectionForMappingScreen.this.list.setSelected(this);
             return true;
         }
         

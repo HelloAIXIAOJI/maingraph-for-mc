@@ -5,7 +5,6 @@ import com.google.gson.JsonElement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * 转换引擎 - 负责蓝图系统中各种数据类型的安全转换
@@ -48,9 +47,8 @@ public class TypeConverter {
         if (value == null) return new ArrayList<>();
         
         // 1. 如果已经是 List，确保返回可变列表
-        if (value instanceof List) {
-            //noinspection unchecked
-            return new ArrayList<>((List<Object>) value);
+        if (value instanceof List<?> listValue) {
+            return new ArrayList<>(listValue);
         }
         
         // 2. 处理 JsonArray (Gson)

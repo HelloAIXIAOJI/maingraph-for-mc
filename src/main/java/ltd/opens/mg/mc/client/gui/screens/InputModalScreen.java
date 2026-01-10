@@ -24,8 +24,6 @@ public class InputModalScreen extends Screen {
     private final boolean isNumeric;
     private final String[] options;
     private final Mode mode;
-    private double scrollAmount = 0;
-    private int visibleCount = 5;
 
     public InputModalScreen(Screen parent, String title, String initialValue, boolean isNumeric, Consumer<String> onConfirm) {
         this(parent, title, initialValue, isNumeric, null, Mode.INPUT, onConfirm);

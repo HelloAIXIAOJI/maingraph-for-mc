@@ -1,42 +1,39 @@
 package ltd.opens.mg.mc.core.blueprint.nodes;
 
-import com.google.gson.JsonObject;
 import ltd.opens.mg.mc.core.blueprint.NodeDefinition;
 import ltd.opens.mg.mc.core.blueprint.NodeHelper;
-import ltd.opens.mg.mc.core.blueprint.engine.NodeContext;
+import ltd.opens.mg.mc.core.blueprint.NodePorts;
+import ltd.opens.mg.mc.core.blueprint.NodeThemes;
 import ltd.opens.mg.mc.core.blueprint.engine.NodeLogicRegistry;
 import ltd.opens.mg.mc.core.blueprint.engine.TypeConverter;
 
+import ltd.opens.mg.mc.core.blueprint.events.RegisterMGMCNodesEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 /**
  * 列表操作节点注册
  */
 public class ListNodes {
-    private static final int COLOR_LIST = 0xFFFFCC00;
-    private static final int COLOR_FLOAT = 0xFF00FF00;
-    private static final int COLOR_STRING = 0xFFDA00DA;
-    private static final int COLOR_BOOLEAN = 0xFF920101;
-    private static final int COLOR_ANY = 0xFFAAAAAA;
     
     private static final Random RANDOM = new Random();
 
-    public static void register() {
+    @SubscribeEvent
+    public static void onRegister(RegisterMGMCNodesEvent event) {
         // --- 1. 获取元素 (get_list_item) ---
         NodeHelper.setup("get_list_item", "node.mgmc.get_list_item.name")
             .category("node_category.mgmc.variable.list")
-            .color(COLOR_LIST)
-            .input("list", "node.mgmc.get_list_item.port.list", NodeDefinition.PortType.LIST, COLOR_LIST)
-            .input("index", "node.mgmc.get_list_item.port.index", NodeDefinition.PortType.FLOAT, COLOR_FLOAT, 0.0)
-            .output("value", "node.mgmc.get_list_item.port.value", NodeDefinition.PortType.ANY, COLOR_ANY)
+            .color(NodeThemes.COLOR_NODE_VARIABLE)
+            .input(NodePorts.LIST, "node.mgmc.get_list_item.port.list", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
+            .input(NodePorts.INDEX, "node.mgmc.get_list_item.port.index", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT, 0.0)
+            .output(NodePorts.VALUE, "node.mgmc.get_list_item.port.value", NodeDefinition.PortType.ANY, NodeThemes.COLOR_PORT_ANY)
             .registerValue((node, portId, ctx) -> {
                 try {
-                    List<Object> list = TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, "list", ctx));
-                    int index = TypeConverter.toInt(NodeLogicRegistry.evaluateInput(node, "index", ctx));
+                    List<Object> list = TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, NodePorts.LIST, ctx));
+                    int index = TypeConverter.toInt(NodeLogicRegistry.evaluateInput(node, NodePorts.INDEX, ctx));
                     if (list != null && index >= 0 && index < list.size()) {
                         return list.get(index);
                     }
@@ -47,13 +44,13 @@ public class ListNodes {
         // --- 2. 添加元素 (list_add) ---
         NodeHelper.setup("list_add", "node.mgmc.list_add.name")
             .category("node_category.mgmc.variable.list")
-            .color(COLOR_LIST)
-            .input("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, COLOR_LIST)
-            .input("item", "node.mgmc.port.value", NodeDefinition.PortType.ANY, COLOR_ANY)
-            .output("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, COLOR_LIST)
+            .color(NodeThemes.COLOR_NODE_VARIABLE)
+            .input(NodePorts.LIST, "node.mgmc.port.list", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
+            .input(NodePorts.ITEM, "node.mgmc.port.value", NodeDefinition.PortType.ANY, NodeThemes.COLOR_PORT_ANY)
+            .output(NodePorts.LIST, "node.mgmc.port.list", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
             .registerValue((node, portId, ctx) -> {
-                List<Object> list = new ArrayList<>(TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, "list", ctx)));
-                Object item = NodeLogicRegistry.evaluateInput(node, "item", ctx);
+                List<Object> list = new ArrayList<>(TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, NodePorts.LIST, ctx)));
+                Object item = NodeLogicRegistry.evaluateInput(node, NodePorts.ITEM, ctx);
                 list.add(item);
                 return list;
             });
@@ -61,13 +58,13 @@ public class ListNodes {
         // --- 3. 移除元素 (list_remove) ---
         NodeHelper.setup("list_remove", "node.mgmc.list_remove.name")
             .category("node_category.mgmc.variable.list")
-            .color(COLOR_LIST)
-            .input("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, COLOR_LIST)
-            .input("index", "node.mgmc.port.index", NodeDefinition.PortType.FLOAT, COLOR_FLOAT, 0.0)
-            .output("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, COLOR_LIST)
+            .color(NodeThemes.COLOR_NODE_VARIABLE)
+            .input(NodePorts.LIST, "node.mgmc.port.list", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
+            .input(NodePorts.INDEX, "node.mgmc.port.index", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT, 0.0)
+            .output(NodePorts.LIST, "node.mgmc.port.list", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
             .registerValue((node, portId, ctx) -> {
-                List<Object> list = new ArrayList<>(TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, "list", ctx)));
-                int index = (int) TypeConverter.toDouble(NodeLogicRegistry.evaluateInput(node, "index", ctx));
+                List<Object> list = new ArrayList<>(TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, NodePorts.LIST, ctx)));
+                int index = (int) TypeConverter.toDouble(NodeLogicRegistry.evaluateInput(node, NodePorts.INDEX, ctx));
                 if (index >= 0 && index < list.size()) {
                     list.remove(index);
                 }
@@ -77,12 +74,12 @@ public class ListNodes {
         // --- 4. 列表长度 (list_length) ---
         NodeHelper.setup("list_length", "node.mgmc.list_length.name")
             .category("node_category.mgmc.variable.list")
-            .color(COLOR_LIST)
-            .input("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, COLOR_LIST)
-            .output("length", "node.mgmc.port.length", NodeDefinition.PortType.FLOAT, COLOR_FLOAT)
+            .color(NodeThemes.COLOR_NODE_VARIABLE)
+            .input(NodePorts.LIST, "node.mgmc.port.list", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
+            .output(NodePorts.LENGTH, "node.mgmc.port.length", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
             .registerValue((node, portId, ctx) -> {
                 try {
-                    List<Object> list = TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, "list", ctx));
+                    List<Object> list = TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, NodePorts.LIST, ctx));
                     return list != null ? (double) list.size() : 0.0;
                 } catch (Exception e) {
                     return 0.0;
@@ -92,13 +89,13 @@ public class ListNodes {
         // --- 5. 包含元素 (list_contains) ---
         NodeHelper.setup("list_contains", "node.mgmc.list_contains.name")
             .category("node_category.mgmc.variable.list")
-            .color(COLOR_LIST)
-            .input("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, COLOR_LIST)
-            .input("item", "node.mgmc.port.value", NodeDefinition.PortType.ANY, COLOR_ANY)
-            .output("result", "node.mgmc.port.condition", NodeDefinition.PortType.BOOLEAN, COLOR_BOOLEAN)
+            .color(NodeThemes.COLOR_NODE_VARIABLE)
+            .input(NodePorts.LIST, "node.mgmc.port.list", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
+            .input(NodePorts.ITEM, "node.mgmc.port.value", NodeDefinition.PortType.ANY, NodeThemes.COLOR_PORT_ANY)
+            .output(NodePorts.RESULT, "node.mgmc.port.condition", NodeDefinition.PortType.BOOLEAN, NodeThemes.COLOR_PORT_BOOLEAN)
             .registerValue((node, portId, ctx) -> {
-                List<Object> list = TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, "list", ctx));
-                Object item = NodeLogicRegistry.evaluateInput(node, "item", ctx);
+                List<Object> list = TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, NodePorts.LIST, ctx));
+                Object item = NodeLogicRegistry.evaluateInput(node, NodePorts.ITEM, ctx);
                 if (list == null) return false;
                 
                 if (list.contains(item)) return true;
@@ -121,16 +118,16 @@ public class ListNodes {
         // --- 6. 设置元素 (list_set_item) ---
         NodeHelper.setup("list_set_item", "node.mgmc.list_set_item.name")
             .category("node_category.mgmc.variable.list")
-            .color(COLOR_LIST)
-            .input("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, COLOR_LIST)
-            .input("index", "node.mgmc.port.index", NodeDefinition.PortType.FLOAT, COLOR_FLOAT, 0.0)
-            .input("value", "node.mgmc.port.value", NodeDefinition.PortType.ANY, COLOR_ANY)
-            .output("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, COLOR_LIST)
+            .color(NodeThemes.COLOR_NODE_VARIABLE)
+            .input(NodePorts.LIST, "node.mgmc.port.list", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
+            .input(NodePorts.INDEX, "node.mgmc.port.index", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT, 0.0)
+            .input(NodePorts.VALUE, "node.mgmc.port.value", NodeDefinition.PortType.ANY, NodeThemes.COLOR_PORT_ANY)
+            .output(NodePorts.LIST, "node.mgmc.port.list", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
             .registerValue((node, portId, ctx) -> {
                 try {
-                    List<Object> list = new ArrayList<>(TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, "list_in", ctx)));
-                    int index = TypeConverter.toInt(NodeLogicRegistry.evaluateInput(node, "index", ctx));
-                    Object value = NodeLogicRegistry.evaluateInput(node, "value", ctx);
+                    List<Object> list = new ArrayList<>(TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, NodePorts.LIST, ctx)));
+                    int index = TypeConverter.toInt(NodeLogicRegistry.evaluateInput(node, NodePorts.INDEX, ctx));
+                    Object value = NodeLogicRegistry.evaluateInput(node, NodePorts.VALUE, ctx);
                     
                     if (index >= 0 && index < list.size()) {
                         list.set(index, value);
@@ -146,13 +143,13 @@ public class ListNodes {
         // --- 7. 合并/转字符串 (list_join) ---
         NodeHelper.setup("list_join", "node.mgmc.list_join.name")
             .category("node_category.mgmc.variable.list")
-            .color(COLOR_LIST)
-            .input("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, COLOR_LIST)
-            .input("delimiter", "node.mgmc.port.delimiter", NodeDefinition.PortType.STRING, COLOR_STRING, ",")
-            .output("string", "node.mgmc.port.output", NodeDefinition.PortType.STRING, COLOR_STRING)
+            .color(NodeThemes.COLOR_NODE_VARIABLE)
+            .input(NodePorts.LIST, "node.mgmc.port.list", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
+            .input(NodePorts.DELIMITER, "node.mgmc.port.delimiter", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING, ",")
+            .output(NodePorts.STRING, "node.mgmc.port.output", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
             .registerValue((node, portId, ctx) -> {
-                List<Object> list = TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, "list", ctx));
-                String delim = TypeConverter.toString(NodeLogicRegistry.evaluateInput(node, "delimiter", ctx));
+                List<Object> list = TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, NodePorts.LIST, ctx));
+                String delim = TypeConverter.toString(NodeLogicRegistry.evaluateInput(node, NodePorts.DELIMITER, ctx));
                 if (list == null) return "";
                 if (delim == null) delim = "";
                 
@@ -164,11 +161,11 @@ public class ListNodes {
         // --- 8. 随机元素 (random_list_item) ---
         NodeHelper.setup("random_list_item", "node.mgmc.random_list_item.name")
             .category("node_category.mgmc.variable.list")
-            .color(COLOR_LIST)
-            .input("list", "node.mgmc.port.list", NodeDefinition.PortType.LIST, COLOR_LIST)
-            .output("item", "node.mgmc.port.value", NodeDefinition.PortType.ANY, COLOR_ANY)
+            .color(NodeThemes.COLOR_NODE_VARIABLE)
+            .input(NodePorts.LIST, "node.mgmc.port.list", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
+            .output(NodePorts.ITEM, "node.mgmc.port.value", NodeDefinition.PortType.ANY, NodeThemes.COLOR_PORT_ANY)
             .registerValue((node, portId, ctx) -> {
-                List<?> list = TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, "list", ctx));
+                List<?> list = TypeConverter.toList(NodeLogicRegistry.evaluateInput(node, NodePorts.LIST, ctx));
                 if (list != null && !list.isEmpty()) {
                     return list.get(RANDOM.nextInt(list.size()));
                 }

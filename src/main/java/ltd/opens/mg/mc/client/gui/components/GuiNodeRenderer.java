@@ -51,7 +51,8 @@ public class GuiNodeRenderer {
             }
             
             // Add Branch Button for Switch Node / Add Input for String Combine
-            if (node.typeId.equals("switch") || node.typeId.equals("string_combine")) {
+            String buttonLabel = (String) node.definition.properties().get("ui_button_label");
+            if (buttonLabel != null) {
                 int btnX = (int) node.x + 5;
                 int btnY = (int) (node.y + node.height - 20);
                 int btnW = (int) node.width - 10;
@@ -62,8 +63,7 @@ public class GuiNodeRenderer {
                 guiGraphics.fill(btnX, btnY, btnX + btnW, btnY + btnH, hovered ? 0xFF444444 : 0xFF333333);
                 guiGraphics.renderOutline(btnX, btnY, btnW, btnH, 0xFF555555);
                 
-                String btnKey = node.typeId.equals("switch") ? "node.mgmc.switch.add_branch" : "node.mgmc.string_combine.add_input";
-                Component btnText = Component.translatable(btnKey);
+                Component btnText = Component.translatable(buttonLabel);
                 guiGraphics.drawString(font, btnText, btnX + (btnW - font.width(btnText)) / 2, btnY + 4, 0xFFFFFFFF, false);
             }
         }

@@ -9,55 +9,80 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
-import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 
-import ltd.opens.mg.mc.core.blueprint.engine.BlueprintEngine;
+import ltd.opens.mg.mc.core.blueprint.BlueprintManager;
 import ltd.opens.mg.mc.core.blueprint.routing.BlueprintRouter;
+import ltd.opens.mg.mc.core.blueprint.engine.BlueprintEngine;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.CommandSourceStack;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.google.gson.JsonObject;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.core.registries.BuiltInRegistries;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import net.minecraft.commands.CommandSourceStack;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.api.distmarker.Dist;
 
 @Mod(MaingraphforMC.MODID)
 public class MaingraphforMC {
     public static final String MODID = "mgmc";
     public static final Logger LOGGER = LogUtils.getLogger();
 
+    private static BlueprintManager serverManager;
+    private static BlueprintRouter clientRouter;
+    private final IEventBus modEventBus;
+
     public MaingraphforMC(IEventBus modEventBus, ModContainer modContainer) {
+        this.modEventBus = modEventBus;
+        
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(ltd.opens.mg.mc.network.MGMCNetwork::register);
 
         NeoForge.EVENT_BUS.register(this);
-        NeoForge.EVENT_BUS.register(new BlueprintServerHandler());
+
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            clientRouter = new BlueprintRouter();
+        }
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        BlueprintRouter.init();
+        // 在 CommonSetup 阶段初始化节点，确保所有 Mod 均已实例化，方便跨 Mod 扩展
+        ltd.opens.mg.mc.core.blueprint.NodeInitializer.init(this.modEventBus);
+        
+        ltd.opens.mg.mc.core.blueprint.EventDispatcher.init();
         LOGGER.info("Maingraph for MC initialized.");
+    }
+
+    @SubscribeEvent
+    public void onServerStarting(ServerStartingEvent event) {
+        serverManager = new BlueprintManager();
+        serverManager.getRouter().load(event.getServer().overworld());
+        LOGGER.info("MGMC: Blueprint manager initialized and routing table loaded for world.");
+    }
+
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        if (serverManager != null) {
+            serverManager.clearCaches();
+        }
+        ltd.opens.mg.mc.core.blueprint.engine.BlueprintEngine.clearCaches();
+        ltd.opens.mg.mc.core.blueprint.EventDispatcher.clear();
+        
+        serverManager = null;
+        LOGGER.info("MGMC: Blueprint manager and global caches cleared.");
+    }
+
+    public static BlueprintManager getServerManager() {
+        return serverManager;
+    }
+
+    public static BlueprintRouter getClientRouter() {
+        return clientRouter;
     }
 
     @SubscribeEvent
@@ -68,6 +93,7 @@ public class MaingraphforMC {
                 .then(Commands.argument("event", StringArgumentType.word())
                     .then(Commands.argument("args", StringArgumentType.greedyString())
                         .executes(context -> {
+                            if (serverManager == null) return 0;
                             String blueprintName = StringArgumentType.getString(context, "blueprint");
                             String eventName = StringArgumentType.getString(context, "event");
                             String argsStr = StringArgumentType.getString(context, "args");
@@ -80,9 +106,10 @@ public class MaingraphforMC {
                             var pos = source.getPosition();
                             
                             try {
-                                JsonObject blueprint = BlueprintServerHandler.getBlueprint(level, blueprintName);
+                                JsonObject blueprint = serverManager.getBlueprint(level, blueprintName);
                                 if (blueprint != null) {
-                                    BlueprintEngine.execute(level, blueprint, "on_mgrun", eventName, args, triggerUuid, triggerName, pos.x, pos.y, pos.z, 0.0);
+                                    // 统一使用带命名空间的事件 ID 或在 Engine 中处理
+                                    BlueprintEngine.execute(level, blueprint, "mgmc:on_mgrun", eventName, args, triggerUuid, triggerName, pos.x, pos.y, pos.z, 0.0);
                                 } else {
                                     context.getSource().sendFailure(Component.translatable("command.mgmc.mgrun.blueprint_not_found", blueprintName));
                                 }
@@ -93,6 +120,7 @@ public class MaingraphforMC {
                         })
                     )
                     .executes(context -> {
+                        if (serverManager == null) return 0;
                         String blueprintName = StringArgumentType.getString(context, "blueprint");
                         String eventName = StringArgumentType.getString(context, "event");
                         CommandSourceStack source = context.getSource();
@@ -101,9 +129,9 @@ public class MaingraphforMC {
                         String triggerName = source.getTextName();
                         var pos = source.getPosition();
                         try {
-                            JsonObject blueprint = BlueprintServerHandler.getBlueprint(level, blueprintName);
+                            JsonObject blueprint = serverManager.getBlueprint(level, blueprintName);
                             if (blueprint != null) {
-                                BlueprintEngine.execute(level, blueprint, "on_mgrun", eventName, new String[0], triggerUuid, triggerName, pos.x, pos.y, pos.z, 0.0);
+                                BlueprintEngine.execute(level, blueprint, "mgmc:on_mgrun", eventName, new String[0], triggerUuid, triggerName, pos.x, pos.y, pos.z, 0.0);
                             } else {
                                 context.getSource().sendFailure(Component.translatable("command.mgmc.mgrun.blueprint_not_found", blueprintName));
                             }
@@ -115,399 +143,5 @@ public class MaingraphforMC {
                 )
             )
         );
-    }
-
-    public static class BlueprintServerHandler {
-        private final java.util.Map<java.util.UUID, Double[]> lastPositions = new java.util.HashMap<>();
-        private static final java.util.concurrent.ExecutorService IO_EXECUTOR = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "MGMC-IO-Thread");
-            t.setDaemon(true);
-            return t;
-        });
-        
-        private static class CachedBlueprint {
-            JsonObject json;
-            long lastModified;
-            long version;
-            CachedBlueprint(JsonObject json, long lastModified, long version) {
-                this.json = json;
-                this.lastModified = lastModified;
-                this.version = version;
-            }
-        }
-        
-        private static final java.util.Map<String, CachedBlueprint> blueprintCache = new java.util.HashMap<>();
-        private static long lastCacheRefresh = 0;
-        private static final long CACHE_REFRESH_INTERVAL = 1000; // 1 second
-
-        private static boolean isValidFileName(String name) {
-            if (name == null || name.isEmpty()) return false;
-            // 严禁路径穿越和非法字符
-            return !name.contains("..") && !name.contains("/") && !name.contains("\\") && name.matches("^[a-zA-Z0-9_\\-\\.]+$");
-        }
-
-        public static Path getBlueprintsDir(ServerLevel level) {
-            Path dir = level.getServer().getWorldPath(LevelResource.ROOT).resolve("mgmc_blueprints");
-            if (!Files.exists(dir)) {
-                try {
-                    Files.createDirectories(dir);
-                } catch (Exception e) {}
-            }
-            return dir;
-        }
-
-        public static JsonObject getBlueprint(ServerLevel level, String name) {
-            if (!isValidFileName(name)) return null;
-            try {
-                if (!name.endsWith(".json")) name += ".json";
-                Path dataFile = getBlueprintsDir(level).resolve(name);
-                if (Files.exists(dataFile)) {
-                    long lastModified = Files.getLastModifiedTime(dataFile).toMillis();
-                    CachedBlueprint cached = blueprintCache.get(name);
-                    if (cached == null || lastModified > cached.lastModified) {
-                        String json = Files.readString(dataFile);
-                        JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
-                        long version = 0;
-                    if (obj.has("_version") && obj.get("_version").isJsonPrimitive() && obj.get("_version").getAsJsonPrimitive().isNumber()) {
-                        version = obj.get("_version").getAsLong();
-                    }
-                        cached = new CachedBlueprint(obj, lastModified, version);
-                        blueprintCache.put(name, cached);
-                    }
-                    return cached.json;
-                }
-            } catch (Exception e) {}
-            return null;
-        }
-
-        public static long getBlueprintVersion(ServerLevel level, String name) {
-            if (!isValidFileName(name)) return -1;
-            if (!name.endsWith(".json")) name += ".json";
-            getBlueprint(level, name); // Ensure it's in cache
-            CachedBlueprint cached = blueprintCache.get(name);
-            return cached != null ? cached.version : -1;
-        }
-
-        public static java.util.concurrent.CompletableFuture<SaveResult> saveBlueprintAsync(ServerLevel level, String name, String data, long expectedVersion) {
-            if (!isValidFileName(name)) {
-                return java.util.concurrent.CompletableFuture.completedFuture(new SaveResult(false, "Invalid file name.", -1));
-            }
-            
-            return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-                try {
-                    String fileName = name.endsWith(".json") ? name : name + ".json";
-                    Path dataFile = getBlueprintsDir(level).resolve(fileName);
-                    
-                    long currentVersion = getBlueprintVersion(level, name);
-                    
-                    // Race condition check
-                    if (currentVersion != -1 && expectedVersion != -1 && currentVersion != expectedVersion) {
-                        return new SaveResult(false, "Race condition detected: blueprint has been modified by another user.", currentVersion);
-                    }
-
-                    JsonObject obj = JsonParser.parseString(data).getAsJsonObject();
-                    long newVersion = (currentVersion == -1 ? 0 : currentVersion) + 1;
-                    obj.addProperty("_version", newVersion);
-                    obj.addProperty("format_version", 3);
-                    
-                    Files.writeString(dataFile, obj.toString());
-                    
-                    // Update cache
-                    blueprintCache.put(fileName, new CachedBlueprint(obj, System.currentTimeMillis(), newVersion));
-                    lastAllBlueprintsRefresh = 0; 
-                    
-                    return new SaveResult(true, "Saved successfully.", newVersion);
-                } catch (Exception e) {
-                    return new SaveResult(false, "Save failed: " + e.getMessage(), -1);
-                }
-            }, IO_EXECUTOR);
-        }
-
-        public static SaveResult saveBlueprint(ServerLevel level, String name, String data, long expectedVersion) {
-            try {
-                return saveBlueprintAsync(level, name, data, expectedVersion).get(5, java.util.concurrent.TimeUnit.SECONDS);
-            } catch (Exception e) {
-                return new SaveResult(false, "Save timeout or error: " + e.getMessage(), -1);
-            }
-        }
-
-        public record SaveResult(boolean success, String message, long newVersion) {}
-
-        public static void deleteBlueprint(ServerLevel level, String name) {
-            if (!isValidFileName(name)) return;
-            try {
-                if (!name.endsWith(".json")) name += ".json";
-                Path dataFile = getBlueprintsDir(level).resolve(name);
-                Files.deleteIfExists(dataFile);
-                blueprintCache.remove(name);
-                lastAllBlueprintsRefresh = 0;
-            } catch (Exception e) {}
-        }
-
-        public static void renameBlueprint(ServerLevel level, String oldName, String newName) {
-            if (!isValidFileName(oldName) || !isValidFileName(newName)) return;
-            try {
-                if (!oldName.endsWith(".json")) oldName += ".json";
-                if (!newName.endsWith(".json")) newName += ".json";
-                Path oldFile = getBlueprintsDir(level).resolve(oldName);
-                Path newFile = getBlueprintsDir(level).resolve(newName);
-                if (Files.exists(oldFile)) {
-                    Files.move(oldFile, newFile);
-                    blueprintCache.remove(oldName);
-                    lastAllBlueprintsRefresh = 0;
-                }
-            } catch (Exception e) {}
-        }
-
-        private static java.util.List<JsonObject> allBlueprintsCache = new java.util.ArrayList<>();
-        private static long lastAllBlueprintsRefresh = 0;
-
-        public static java.util.Collection<JsonObject> getAllBlueprints(ServerLevel level) {
-            long now = System.currentTimeMillis();
-            if (now - lastAllBlueprintsRefresh < CACHE_REFRESH_INTERVAL) {
-                return allBlueprintsCache;
-            }
-
-            java.util.List<JsonObject> all = new java.util.ArrayList<>();
-            try {
-                Path dir = getBlueprintsDir(level);
-                try (var stream = Files.list(dir)) {
-                    stream.filter(p -> p.toString().endsWith(".json")).forEach(p -> {
-                        String name = p.getFileName().toString();
-                        JsonObject bp = getBlueprint(level, name);
-                        if (bp != null) all.add(bp);
-                    });
-                }
-                allBlueprintsCache = all;
-                lastAllBlueprintsRefresh = now;
-            } catch (Exception e) {}
-            return all;
-        }
-
-        public static java.util.List<JsonObject> getBlueprintsForId(ServerLevel level, String... ids) {
-            java.util.List<JsonObject> result = new java.util.ArrayList<>();
-            java.util.Set<String> processedPaths = new java.util.HashSet<>();
-            
-            for (String id : ids) {
-                for (String path : BlueprintRouter.getMappedBlueprints(id)) {
-                    if (processedPaths.add(path)) {
-                        JsonObject bp = getBlueprint(level, path);
-                        if (bp != null) result.add(bp);
-                    }
-                }
-            }
-            return result;
-        }
-
-        @SubscribeEvent
-        public void onServerTick(ServerTickEvent.Post event) {
-            var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-            if (server == null) return;
-            if (server.getTickCount() % 5 != 0) return;
-
-            for (var player : server.getPlayerList().getPlayers()) {
-                double x = player.getX();
-                double y = player.getY();
-                double z = player.getZ();
-                java.util.UUID uuid = player.getUUID();
-
-                Double[] lastPos = lastPositions.get(uuid);
-                if (lastPos != null) {
-                    double dx = x - lastPos[0];
-                    double dy = y - lastPos[1];
-                    double dz = z - lastPos[2];
-                    double distSq = dx * dx + dy * dy + dz * dz;
-
-                    if (distSq > 0.25) {
-                        try {
-                            double speed = Math.sqrt(distSq) / 5.0; // Distance over 5 ticks
-                            ServerLevel level = (ServerLevel) player.level();
-                            // 精准路由：仅执行绑定到 global 或 players 的蓝图
-                            for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, BlueprintRouter.PLAYERS_ID)) {
-                                BlueprintEngine.execute(level, blueprint, "on_player_move", "", new String[0], 
-                                    uuid.toString(), player.getName().getString(), x, y, z, speed);
-                            }
-                            lastPositions.put(uuid, new Double[]{x, y, z});
-                        } catch (Exception e) {}
-                    }
-                } else {
-                    lastPositions.put(uuid, new Double[]{x, y, z});
-                }
-            }
-
-            if (server.getTickCount() % 100 == 0) {
-                lastPositions.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
-            }
-        }
-
-        @SubscribeEvent
-        public void onBlockBreak(BlockEvent.BreakEvent event) {
-            if (event.getLevel() instanceof ServerLevel level) {
-                String blockId = BuiltInRegistries.BLOCK.getKey(event.getState().getBlock()).toString();
-                String uuid = event.getPlayer().getUUID().toString();
-                String name = event.getPlayer().getName().getString();
-                var pos = event.getPos();
-                // 精准路由：执行 global 和该方块 ID 绑定的蓝图
-                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, blockId)) {
-                    BlueprintEngine.execute(level, blueprint, "on_break_block", "", new String[0], 
-                        uuid, name, pos.getX(), pos.getY(), pos.getZ(), 0.0, blockId, "", 0.0, "");
-                }
-            }
-        }
-
-        @SubscribeEvent
-        public void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
-            if (event.getLevel() instanceof ServerLevel level && event.getEntity() instanceof Player player) {
-                String blockId = BuiltInRegistries.BLOCK.getKey(event.getState().getBlock()).toString();
-                String uuid = player.getUUID().toString();
-                String name = player.getName().getString();
-                var pos = event.getPos();
-                // 精准路由：执行 global 和该方块 ID 绑定的蓝图
-                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, blockId)) {
-                    BlueprintEngine.execute(level, blueprint, "on_place_block", "", new String[0], 
-                        uuid, name, pos.getX(), pos.getY(), pos.getZ(), 0.0, blockId, "", 0.0, "");
-                }
-            }
-        }
-
-        @SubscribeEvent
-        public void onBlockInteract(PlayerInteractEvent.RightClickBlock event) {
-            if (event.getLevel() instanceof ServerLevel level) {
-                String blockId = BuiltInRegistries.BLOCK.getKey(level.getBlockState(event.getPos()).getBlock()).toString();
-                String uuid = event.getEntity().getUUID().toString();
-                String name = event.getEntity().getName().getString();
-                var pos = event.getPos();
-                // 精准路由：执行 global 和该方块 ID 绑定的蓝图
-                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, blockId)) {
-                    BlueprintEngine.execute(level, blueprint, "on_interact_block", "", new String[0], 
-                        uuid, name, pos.getX(), pos.getY(), pos.getZ(), 0.0, blockId, "", 0.0, "");
-                }
-            }
-        }
-
-        @SubscribeEvent
-        public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
-            if (event.getEntity().level() instanceof ServerLevel level) {
-                String uuid = event.getEntity().getUUID().toString();
-                String name = event.getEntity().getName().getString();
-                var pos = event.getEntity().position();
-                // 精准路由：执行 global 和 players 绑定的蓝图
-                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, BlueprintRouter.PLAYERS_ID)) {
-                    BlueprintEngine.execute(level, blueprint, "on_player_join", "", new String[0], 
-                        uuid, name, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, "");
-                }
-            }
-        }
-
-        @SubscribeEvent
-        public void onLivingDeath(LivingDeathEvent event) {
-            if (event.getEntity().level() instanceof ServerLevel level) {
-                String victimUuid = event.getEntity().getUUID().toString();
-                String victimName = event.getEntity().getName().getString();
-                String attackerUuid = event.getSource().getEntity() != null ? event.getSource().getEntity().getUUID().toString() : "";
-                var pos = event.getEntity().position();
-                String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(event.getEntity().getType()).toString();
-
-                if (event.getEntity() instanceof Player) {
-                    // 精准路由：针对玩家的死亡事件
-                    for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, BlueprintRouter.PLAYERS_ID)) {
-                        BlueprintEngine.execute(level, blueprint, "on_player_death", "", new String[0], 
-                            victimUuid, victimName, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, attackerUuid);
-                    }
-                }
-
-                // 精准路由：针对特定实体类型的死亡事件
-                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, entityId)) {
-                    BlueprintEngine.execute(level, blueprint, "on_entity_death", "", new String[0], 
-                        victimUuid, victimName, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, attackerUuid);
-                }
-            }
-        }
-
-        @SubscribeEvent
-        public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-            if (event.getEntity().level() instanceof ServerLevel level) {
-                String uuid = event.getEntity().getUUID().toString();
-                String name = event.getEntity().getName().getString();
-                var pos = event.getEntity().position();
-                // 精准路由：执行 global 和 players 绑定的蓝图
-                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, BlueprintRouter.PLAYERS_ID)) {
-                    BlueprintEngine.execute(level, blueprint, "on_player_respawn", "", new String[0], 
-                        uuid, name, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, "");
-                }
-            }
-        }
-
-        @SubscribeEvent
-        public void onLivingDamage(LivingIncomingDamageEvent event) {
-            if (event.getEntity().level() instanceof ServerLevel level) {
-                var victim = event.getEntity();
-                String victimUuid = victim.getUUID().toString();
-                String victimName = victim.getName().getString();
-                var attacker = event.getSource().getDirectEntity();
-                String attackerUuid = attacker != null ? attacker.getUUID().toString() : "";
-                String attackerName = attacker != null ? attacker.getName().getString() : "";
-                double amount = event.getAmount();
-                var pos = victim.position();
-                String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(victim.getType()).toString();
-
-                java.util.List<String> routingIds = new java.util.ArrayList<>();
-                routingIds.add(BlueprintRouter.GLOBAL_ID);
-                routingIds.add(entityId);
-                if (victim instanceof Player) {
-                    routingIds.add(BlueprintRouter.PLAYERS_ID);
-                }
-
-                for (JsonObject blueprint : getBlueprintsForId(level, routingIds.toArray(new String[0]))) {
-                    BlueprintEngine.execute(level, blueprint, "on_entity_hurt", "", new String[0],
-                        victimUuid, victimName, pos.x, pos.y, pos.z, amount, "", attackerUuid, 0.0, attackerName);
-                }
-            }
-        }
-
-        @SubscribeEvent
-        public void onUseItem(PlayerInteractEvent.RightClickItem event) {
-            if (event.getLevel() instanceof ServerLevel level) {
-                String itemId = BuiltInRegistries.ITEM.getKey(event.getItemStack().getItem()).toString();
-                String uuid = event.getEntity().getUUID().toString();
-                String name = event.getEntity().getName().getString();
-                var pos = event.getEntity().position();
-                // 精准路由：执行 global 和该物品 ID 绑定的蓝图
-                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, itemId)) {
-                    BlueprintEngine.execute(level, blueprint, "on_use_item", "", new String[0], 
-                        uuid, name, pos.x, pos.y, pos.z, 0.0, "", itemId, 0.0, "");
-                }
-            }
-        }
-
-        @SubscribeEvent
-        public void onPlayerAttack(AttackEntityEvent event) {
-            if (event.getEntity().level() instanceof ServerLevel level) {
-                String attackerUuid = event.getEntity().getUUID().toString();
-                String attackerName = event.getEntity().getName().getString();
-                String victimUuid = event.getTarget().getUUID().toString();
-                var pos = event.getEntity().position();
-                // 精准路由：针对玩家的攻击事件
-                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, BlueprintRouter.PLAYERS_ID)) {
-                    BlueprintEngine.execute(level, blueprint, "on_player_attack", "", new String[0], 
-                        attackerUuid, attackerName, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, victimUuid);
-                }
-            }
-        }
-
-        @SubscribeEvent
-        public void onEntitySpawn(EntityJoinLevelEvent event) {
-            if (event.getLevel() instanceof ServerLevel level && event.getEntity() instanceof LivingEntity) {
-                String uuid = event.getEntity().getUUID().toString();
-                String name = event.getEntity().getName().getString();
-                var pos = event.getEntity().position();
-                String entityId = BuiltInRegistries.ENTITY_TYPE.getKey(event.getEntity().getType()).toString();
-                // 精准路由：执行 global 和该实体 ID 绑定的蓝图
-                for (JsonObject blueprint : getBlueprintsForId(level, BlueprintRouter.GLOBAL_ID, entityId)) {
-                    BlueprintEngine.execute(level, blueprint, "on_entity_spawn", "", new String[0], 
-                        uuid, name, pos.x, pos.y, pos.z, 0.0, "", "", 0.0, "");
-                }
-            }
-        }
     }
 }

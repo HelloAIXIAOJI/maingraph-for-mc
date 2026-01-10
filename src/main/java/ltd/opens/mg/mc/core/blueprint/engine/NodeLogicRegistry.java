@@ -4,11 +4,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class NodeLogicRegistry {
-    private static final Map<String, NodeHandler> HANDLERS = new HashMap<>();
+    private static final Map<String, NodeHandler> HANDLERS = new ConcurrentHashMap<>();
 
     public static void register(String typeId, NodeHandler handler) {
         HANDLERS.put(typeId, handler);

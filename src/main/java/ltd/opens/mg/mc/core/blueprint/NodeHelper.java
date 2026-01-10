@@ -2,6 +2,10 @@ package ltd.opens.mg.mc.core.blueprint;
 
 import ltd.opens.mg.mc.core.blueprint.engine.NodeHandler;
 import ltd.opens.mg.mc.core.blueprint.engine.NodeLogicRegistry;
+import ltd.opens.mg.mc.core.blueprint.engine.TypeConverter;
+
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
  * 节点注册助手类，提供链式调用 API 统一元数据与逻辑注册。
@@ -17,12 +21,25 @@ public class NodeHelper {
 
     /**
      * 开始配置一个新节点
-     * @param id 节点唯一标识
+     * @param id 节点唯一标识（若不包含 ":" 则自动补全为当前 ModID）
      * @param nameKey 节点名称的 i18n key
      * @return NodeHelper 实例
      */
     public static NodeHelper setup(String id, String nameKey) {
-        return new NodeHelper(id, nameKey);
+        String finalId = id;
+        if (!id.contains(":")) {
+            String namespace = "mgmc";
+            try {
+                String activeNamespace = net.neoforged.fml.ModLoadingContext.get().getActiveNamespace();
+                if (activeNamespace != null && !activeNamespace.isEmpty()) {
+                    namespace = activeNamespace;
+                }
+            } catch (Throwable ignored) {
+                // 忽略非 Mod 加载环境下的异常
+            }
+            finalId = namespace + ":" + id;
+        }
+        return new NodeHelper(finalId, nameKey);
     }
 
     /**
@@ -111,6 +128,18 @@ public class NodeHelper {
     }
 
     /**
+     * 为节点配置一个底部的交互按钮（如“添加分支”、“添加输入”）
+     * @param labelKey 按钮文字的 i18n key
+     * @param actionType 动作类型（如 "add_output_modal", "add_input_indexed"）
+     * @return NodeHelper 实例
+     */
+    public NodeHelper button(String labelKey, String actionType) {
+        builder.addProperty("ui_button_label", labelKey);
+        builder.addProperty("ui_button_action", actionType);
+        return this;
+    }
+
+    /**
      * 注册节点（元数据与逻辑同时注册）
      * @param handler 节点执行逻辑处理器
      */
@@ -118,8 +147,16 @@ public class NodeHelper {
         if (handler == null) {
             throw new IllegalArgumentException("Node handler cannot be null for node: " + id);
         }
-        NodeRegistry.register(builder.build());
+        registerMetadataOnly();
         NodeLogicRegistry.register(id, handler);
+    }
+
+    /**
+     * 仅注册节点元数据（不注册执行逻辑）
+     * 适用于纯客户端环境（如编辑器）或只需要显示定义的场景，实现逻辑与元数据解耦。
+     */
+    public void registerMetadataOnly() {
+        NodeRegistry.register(builder.build());
     }
 
     public void registerExec(SimpleExecuteHandler handler) {
@@ -129,6 +166,43 @@ public class NodeHelper {
                 handler.handle(node, ctx);
             }
         });
+    }
+
+    /**
+     * 注册一个 Minecraft 事件节点。
+     * 该方法会将事件监听所需的元数据存储到 NodeDefinition 中，
+     * 以便 EventDispatcher 能够自动发现并分发事件。
+     *
+     * @param eventClass Minecraft 事件类
+     * @param contextPopulator 填充 NodeContext 的逻辑
+     * @param routingIdExtractor 提取路由 ID 的逻辑（如 blockId, itemId 等）
+     * @param valueHandler 节点数据提取逻辑
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends net.neoforged.bus.api.Event> void registerEvent(
+            Class<T> eventClass,
+            java.util.function.BiConsumer<T, ltd.opens.mg.mc.core.blueprint.engine.NodeContext.Builder> contextPopulator,
+            java.util.function.Function<T, String> routingIdExtractor,
+            SimpleValueHandler valueHandler) {
+
+        EventMetadata metadata = new EventMetadata(
+            eventClass,
+            (event, builder) -> contextPopulator.accept((T) event, builder),
+            event -> routingIdExtractor.apply((T) event)
+        );
+
+        builder.addProperty("event_metadata", metadata);
+        registerValue(valueHandler);
+    }
+
+    /**
+     * 注册一个不需要路由 ID 的 Minecraft 事件节点（如玩家加入世界）。
+     */
+    public <T extends net.neoforged.bus.api.Event> void registerEvent(
+            Class<T> eventClass,
+            java.util.function.BiConsumer<T, ltd.opens.mg.mc.core.blueprint.engine.NodeContext.Builder> contextPopulator,
+            SimpleValueHandler valueHandler) {
+        registerEvent(eventClass, contextPopulator, e -> ltd.opens.mg.mc.core.blueprint.routing.BlueprintRouter.GLOBAL_ID, valueHandler);
     }
 
     public static abstract class NodeHandlerAdapter implements NodeHandler {
@@ -175,5 +249,52 @@ public class NodeHelper {
 
     public String getId() {
         return id;
+    }
+
+    // --- 高阶封装方法，减少样板代码 ---
+
+    /**
+     * 快速添加标准双参数数学输入（A, B）
+     */
+    public NodeHelper mathInputs(double defaultA, double defaultB) {
+        return this.input(NodePorts.A, "node.mgmc.port.a", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT, defaultA)
+                   .input(NodePorts.B, "node.mgmc.port.b", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT, defaultB);
+    }
+
+    /**
+     * 快速添加标准数学输出（RESULT）
+     */
+    public NodeHelper mathOutput() {
+        return this.output(NodePorts.RESULT, "node.mgmc.port.output", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT);
+    }
+
+    /**
+     * 注册双参数数学运算逻辑
+     */
+    public void registerMathOp(BiFunction<Double, Double, Double> op) {
+        // 自动补充默认输入输出
+        if (builder.getInputs().isEmpty()) mathInputs(0.0, 0.0);
+        if (builder.getOutputs().isEmpty()) mathOutput();
+
+        registerValue((node, portId, ctx) -> {
+            double a = TypeConverter.toDouble(NodeLogicRegistry.evaluateInput(node, NodePorts.A, ctx));
+            double b = TypeConverter.toDouble(NodeLogicRegistry.evaluateInput(node, NodePorts.B, ctx));
+            return op.apply(a, b);
+        });
+    }
+
+    /**
+     * 注册单参数数学运算逻辑
+     */
+    public void registerUnaryMathOp(Function<Double, Double> op) {
+        if (builder.getInputs().isEmpty()) {
+            input(NodePorts.INPUT, "node.mgmc.port.input", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT, 0.0);
+        }
+        if (builder.getOutputs().isEmpty()) mathOutput();
+
+        registerValue((node, portId, ctx) -> {
+            double input = TypeConverter.toDouble(NodeLogicRegistry.evaluateInput(node, NodePorts.INPUT, ctx));
+            return op.apply(input);
+        });
     }
 }

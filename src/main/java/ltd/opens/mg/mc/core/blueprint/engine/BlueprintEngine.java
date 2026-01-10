@@ -5,17 +5,17 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import ltd.opens.mg.mc.MaingraphforMC;
-import ltd.opens.mg.mc.core.blueprint.engine.NodeContext;
-import ltd.opens.mg.mc.core.blueprint.engine.NodeLogicRegistry;
-import ltd.opens.mg.mc.core.blueprint.engine.TypeConverter;
 import net.minecraft.world.level.Level;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class BlueprintEngine {
 
     private static final ThreadLocal<Integer> RECURSION_DEPTH = ThreadLocal.withInitial(() -> 0);
+    
+    // 缓存蓝图的索引信息，使用 WeakHashMap 防止内存泄漏
+    private static final Map<JsonObject, Map<String, List<JsonObject>>> EVENT_INDEX_CACHE = Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<JsonObject, Map<String, JsonObject>> NODE_MAP_CACHE = Collections.synchronizedMap(new WeakHashMap<>());
 
     public static void execute(Level level, String json, String eventType, String name, String[] args, 
                                 String triggerUuid, String triggerName, double tx, double ty, double tz, double speed) {
@@ -41,6 +41,27 @@ public class BlueprintEngine {
     public static void execute(Level level, JsonObject root, String eventType, String name, String[] args, 
                                 String triggerUuid, String triggerName, double tx, double ty, double tz, double speed,
                                 String triggerBlockId, String triggerItemId, double triggerValue, String triggerExtraUuid) {
+        NodeContext.Builder builder = new NodeContext.Builder(level)
+            .eventName(name)
+            .args(args)
+            .triggerUuid(triggerUuid)
+            .triggerName(triggerName)
+            .triggerX(tx).triggerY(ty).triggerZ(tz)
+            .triggerSpeed(speed)
+            .triggerBlockId(triggerBlockId)
+            .triggerItemId(triggerItemId)
+            .triggerValue(triggerValue)
+            .triggerExtraUuid(triggerExtraUuid);
+        
+        execute(level, root, eventType, builder);
+    }
+
+    public static void clearCaches() {
+        EVENT_INDEX_CACHE.clear();
+        NODE_MAP_CACHE.clear();
+    }
+
+    public static void execute(Level level, JsonObject root, String eventType, NodeContext.Builder contextBuilder) {
         if (RECURSION_DEPTH.get() >= ltd.opens.mg.mc.Config.getMaxRecursionDepth()) {
             return;
         }
@@ -51,30 +72,49 @@ public class BlueprintEngine {
                 return;
             }
 
-            JsonArray executionNodes = root.getAsJsonArray("execution");
-            Map<String, JsonObject> nodesMap = new HashMap<>();
-            
-            for (JsonElement e : executionNodes) {
-                if (!e.isJsonObject()) continue;
-                JsonObject node = e.getAsJsonObject();
-                if (node.has("id")) {
-                    nodesMap.put(node.get("id").getAsString(), node);
+            // 1. 获取或构建节点 ID 映射表 (用于 NodeContext)
+            Map<String, JsonObject> nodesMap = NODE_MAP_CACHE.computeIfAbsent(root, r -> {
+                JsonArray executionNodes = r.getAsJsonArray("execution");
+                Map<String, JsonObject> map = new HashMap<>();
+                for (JsonElement e : executionNodes) {
+                    if (!e.isJsonObject()) continue;
+                    JsonObject node = e.getAsJsonObject();
+                    if (node.has("id")) {
+                        map.put(node.get("id").getAsString(), node);
+                    }
                 }
-            }
+                return map;
+            });
+
+            // 2. 获取或构建事件索引表 (用于快速定位入口节点)
+            Map<String, List<JsonObject>> eventIndex = EVENT_INDEX_CACHE.computeIfAbsent(root, r -> {
+                JsonArray executionNodes = r.getAsJsonArray("execution");
+                Map<String, List<JsonObject>> index = new HashMap<>();
+                for (JsonElement e : executionNodes) {
+                    if (!e.isJsonObject()) continue;
+                    JsonObject node = e.getAsJsonObject();
+                    String type = node.has("type") ? node.get("type").getAsString() : null;
+                    if (type != null) {
+                        // 统一存储不带命名空间的类型
+                        String pureType = type.contains(":") ? type.substring(type.indexOf(":") + 1) : type;
+                        index.computeIfAbsent(pureType, k -> new ArrayList<>()).add(node);
+                    }
+                }
+                return index;
+            });
 
             int formatVersion = root.has("format_version") ? root.get("format_version").getAsInt() : 1;
-            NodeContext ctx = new NodeContext(level, name, args, triggerUuid, triggerName, tx, ty, tz, speed, 
-                                            triggerBlockId, triggerItemId, triggerValue, triggerExtraUuid, nodesMap, formatVersion);
+            NodeContext ctx = contextBuilder.nodesMap(nodesMap).formatVersion(formatVersion).build();
 
-            for (JsonElement e : executionNodes) {
-                if (!e.isJsonObject()) continue;
-                JsonObject node = e.getAsJsonObject();
-                String type = node.has("type") ? node.get("type").getAsString() : null;
-                
-                if (type != null && type.equals(eventType)) {
-                    // Check if the 'name' output matches the requested name
+            // 3. 根据事件类型快速检索
+            String pureEvent = eventType.contains(":") ? eventType.substring(eventType.indexOf(":") + 1) : eventType;
+            List<JsonObject> targetNodes = eventIndex.get(pureEvent);
+            
+            if (targetNodes != null) {
+                for (JsonObject node : targetNodes) {
+                    // 检查 'name' 输出是否匹配请求的名称 (针对 mgrun 等自定义事件)
                     String nodeName = TypeConverter.toString(NodeLogicRegistry.evaluateOutput(node, "name", ctx));
-                    if (name.isEmpty() || name.equals(nodeName)) {
+                    if (ctx.eventName.isEmpty() || ctx.eventName.equals(nodeName)) {
                         NodeLogicRegistry.triggerExec(node, "exec", ctx);
                     }
                 }
