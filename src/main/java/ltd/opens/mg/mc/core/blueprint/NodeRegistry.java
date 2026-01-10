@@ -1,6 +1,7 @@
 package ltd.opens.mg.mc.core.blueprint;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -45,6 +46,6 @@ public class NodeRegistry {
     }
 
     public static Collection<NodeDefinition> getAllDefinitions() {
-        return REGISTRY.values();
+        return Collections.unmodifiableCollection(REGISTRY.values());
     }
 }
