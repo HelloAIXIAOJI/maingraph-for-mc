@@ -9,6 +9,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.LevelResource;
@@ -27,8 +28,8 @@ public class BlueprintRouter {
     public static final String GLOBAL_ID = "mgmc:global";
     public static final String PLAYERS_ID = "mgmc:players";
 
-    // 内存中的路由表: ID -> 蓝图路径列表
-    private final Map<String, Set<String>> routingTable = new ConcurrentHashMap<>();
+    // 使用原子引用管理路由表，确保加载时的线程安全
+    private final AtomicReference<Map<String, Set<String>>> routingTable = new AtomicReference<>(new ConcurrentHashMap<>());
 
     public BlueprintRouter() {
     }
@@ -39,14 +40,14 @@ public class BlueprintRouter {
     public void load(ServerLevel level) {
         Path filePath = getMappingsPath(level);
         if (!Files.exists(filePath)) {
-            routingTable.clear();
+            routingTable.set(new ConcurrentHashMap<>());
             save(level); // 创建初始文件
             return;
         }
 
         try (FileReader reader = new FileReader(filePath.toFile())) {
             JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            routingTable.clear();
+            Map<String, Set<String>> newTable = new ConcurrentHashMap<>();
             if (json != null) {
                 for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
                     JsonArray array = entry.getValue().getAsJsonArray();
@@ -54,10 +55,12 @@ public class BlueprintRouter {
                     for (JsonElement e : array) {
                         blueprints.add(e.getAsString());
                     }
-                    routingTable.put(entry.getKey(), blueprints);
+                    newTable.put(entry.getKey(), blueprints);
                 }
             }
-            LOGGER.info("MGMC: Loaded {} ID mappings from {}", routingTable.size(), filePath);
+            // 原子替换，防止在 clear() 期间其他线程读取到空数据
+            routingTable.set(newTable);
+            LOGGER.info("MGMC: Loaded {} ID mappings from {}", newTable.size(), filePath);
         } catch (IOException e) {
             LOGGER.error("MGMC: Failed to load mappings from " + filePath, e);
         }
@@ -72,7 +75,8 @@ public class BlueprintRouter {
             Files.createDirectories(filePath.getParent());
             try (FileWriter writer = new FileWriter(filePath.toFile())) {
                 JsonObject json = new JsonObject();
-                for (Map.Entry<String, Set<String>> entry : routingTable.entrySet()) {
+                Map<String, Set<String>> currentTable = routingTable.get();
+                for (Map.Entry<String, Set<String>> entry : currentTable.entrySet()) {
                     JsonArray array = new JsonArray();
                     entry.getValue().forEach(array::add);
                     json.add(entry.getKey(), array);
@@ -92,14 +96,14 @@ public class BlueprintRouter {
      * 获取指定 ID 绑定的所有蓝图路径
      */
     public Set<String> getMappedBlueprints(String id) {
-        return routingTable.getOrDefault(id, Collections.emptySet());
+        return routingTable.get().getOrDefault(id, Collections.emptySet());
     }
 
     /**
      * 添加映射（注意：此方法目前仅由客户端通过网络请求触发，由 handleSaveMappings 统一处理保存）
      */
     public void addMapping(String id, String blueprintPath) {
-        routingTable.computeIfAbsent(id, k -> Collections.newSetFromMap(new ConcurrentHashMap<>()))
+        routingTable.get().computeIfAbsent(id, k -> Collections.newSetFromMap(new ConcurrentHashMap<>()))
                     .add(blueprintPath);
     }
 
@@ -107,11 +111,11 @@ public class BlueprintRouter {
      * 移除映射
      */
     public void removeMapping(String id, String blueprintPath) {
-        Set<String> blueprints = routingTable.get(id);
+        Set<String> blueprints = routingTable.get().get(id);
         if (blueprints != null) {
             blueprints.remove(blueprintPath);
             if (blueprints.isEmpty()) {
-                routingTable.remove(id);
+                routingTable.get().remove(id);
             }
         }
     }
@@ -120,7 +124,7 @@ public class BlueprintRouter {
      * 获取所有已订阅的 ID
      */
     public Set<String> getAllSubscribedIds() {
-        return routingTable.keySet();
+        return routingTable.get().keySet();
     }
 
     /**
@@ -128,7 +132,7 @@ public class BlueprintRouter {
      */
     public Map<String, Set<String>> getFullRoutingTable() {
         Map<String, Set<String>> copy = new HashMap<>();
-        routingTable.forEach((k, v) -> copy.put(k, new HashSet<>(v)));
+        routingTable.get().forEach((k, v) -> copy.put(k, new HashSet<>(v)));
         return copy;
     }
 
@@ -136,12 +140,13 @@ public class BlueprintRouter {
      * 批量更新路由表并保存
      */
     public void updateAllMappings(ServerLevel level, Map<String, Set<String>> newMappings) {
-        routingTable.clear();
+        Map<String, Set<String>> newTable = new ConcurrentHashMap<>();
         newMappings.forEach((k, v) -> {
             Set<String> set = Collections.newSetFromMap(new ConcurrentHashMap<>());
             set.addAll(v);
-            routingTable.put(k, set);
+            newTable.put(k, set);
         });
+        routingTable.set(newTable);
         save(level);
     }
 
@@ -149,11 +154,12 @@ public class BlueprintRouter {
      * 客户端专用的内存更新（不保存文件）
      */
     public void clientUpdateMappings(Map<String, Set<String>> newMappings) {
-        routingTable.clear();
+        Map<String, Set<String>> newTable = new ConcurrentHashMap<>();
         newMappings.forEach((k, v) -> {
             Set<String> set = Collections.newSetFromMap(new ConcurrentHashMap<>());
             set.addAll(v);
-            routingTable.put(k, set);
+            newTable.put(k, set);
         });
+        routingTable.set(newTable);
     }
 }
