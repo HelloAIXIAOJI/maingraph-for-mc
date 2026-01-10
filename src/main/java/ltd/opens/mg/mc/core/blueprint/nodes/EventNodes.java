@@ -358,15 +358,24 @@ public class EventNodes {
             .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
             .registerEvent(PlayerTickEvent.Post.class, (e, b) -> {
                 Player player = e.getEntity();
-                if (player.level().getGameTime() % 5 == 0) {
-                    double x = player.getX();
-                    double y = player.getY();
-                    double z = player.getZ();
+                double dx = player.getX() - player.xo;
+                double dy = player.getY() - player.yo;
+                double dz = player.getZ() - player.zo;
+                double distanceSq = dx * dx + dy * dy + dz * dz;
+
+                if (distanceSq > 0.0001) {
                     b.triggerUuid(player.getUUID().toString())
                      .triggerName(player.getName().getString())
-                     .triggerX(x).triggerY(y).triggerZ(z);
+                     .triggerX(player.getX()).triggerY(player.getY()).triggerZ(player.getZ())
+                     .triggerSpeed((float) Math.sqrt(distanceSq));
                 }
-            }, e -> BlueprintRouter.PLAYERS_ID,
+            }, e -> {
+                Player player = e.getEntity();
+                double dx = player.getX() - player.xo;
+                double dy = player.getY() - player.yo;
+                double dz = player.getZ() - player.zo;
+                return (dx * dx + dy * dy + dz * dz > 0.0001) ? BlueprintRouter.PLAYERS_ID : null;
+            },
             (node, portId, ctx) -> switch (portId) {
                 case NodePorts.X -> ctx.triggerX;
                 case NodePorts.Y -> ctx.triggerY;
