@@ -23,11 +23,16 @@ public class EventDispatcher {
 
     private static final Map<Class<? extends Event>, List<NodeDefinition>> EVENT_NODES = new ConcurrentHashMap<>();
     private static final Set<Class<? extends Event>> REGISTERED_CLASSES = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private static final Map<Class<? extends Event>, List<NodeDefinition>> CONCRETE_CACHE = new ConcurrentHashMap<>();
 
     /**
      * 初始化分发器，从注册表中提取所有事件节点并注册监听。
      */
     public static void init() {
+        EVENT_NODES.clear();
+        REGISTERED_CLASSES.clear();
+        CONCRETE_CACHE.clear();
+
         for (NodeDefinition def : NodeRegistry.getAllDefinitions()) {
             EventMetadata metadata = (EventMetadata) def.properties().get("event_metadata");
             if (metadata != null) {
@@ -46,8 +51,18 @@ public class EventDispatcher {
     }
 
     private static <T extends Event> void handleEvent(T event) {
-        List<NodeDefinition> defs = EVENT_NODES.get(event.getClass());
-        if (defs == null) return;
+        Class<? extends Event> concreteClass = event.getClass();
+        List<NodeDefinition> defs = CONCRETE_CACHE.computeIfAbsent(concreteClass, clazz -> {
+            List<NodeDefinition> matched = new ArrayList<>();
+            for (Map.Entry<Class<? extends Event>, List<NodeDefinition>> entry : EVENT_NODES.entrySet()) {
+                if (entry.getKey().isAssignableFrom(clazz)) {
+                    matched.addAll(entry.getValue());
+                }
+            }
+            return matched.isEmpty() ? Collections.emptyList() : matched;
+        });
+
+        if (defs.isEmpty()) return;
 
         // 获取 Level (通常事件都能拿到 Level)
         Level level = getLevelFromEvent(event);
