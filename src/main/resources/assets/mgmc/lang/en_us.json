@@ -59,6 +59,7 @@
   "node_category.mgmc.events.world": "World Events",
   "node_category.mgmc.action": "Action",
   "node_category.mgmc.action.player": "Player Actions",
+  "node_category.mgmc.action.entity": "Entity Actions",
   "node_category.mgmc.action.world": "World Actions",
   "node_category.mgmc.special": "Special",
   "node_category.mgmc.logic": "Logic",

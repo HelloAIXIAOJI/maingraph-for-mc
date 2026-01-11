@@ -60,6 +60,7 @@
   "node_category.mgmc.entity": "实体",
   "node_category.mgmc.action": "动作",
   "node_category.mgmc.action.player": "玩家动作",
+  "node_category.mgmc.action.entity": "实体动作",
   "node_category.mgmc.action.world": "世界动作",
   "node_category.mgmc.special": "特殊",
   "node_category.mgmc.logic": "逻辑",
