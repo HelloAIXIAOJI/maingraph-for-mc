@@ -42,6 +42,10 @@ public class NodeHelper {
         return new NodeHelper(finalId, nameKey);
     }
 
+    public String getId() {
+        return id;
+    }
+
     /**
      * 设置节点分类
      * @param categoryKey 分类的 i18n key (支持嵌套路径如 mgmc.math)
@@ -245,10 +249,6 @@ public class NodeHelper {
      */
     public NodeDefinition.Builder getBuilder() {
         return builder;
-    }
-
-    public String getId() {
-        return id;
     }
 
     // --- 高阶封装方法，减少样板代码 ---
