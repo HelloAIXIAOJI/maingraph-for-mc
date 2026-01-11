@@ -61,7 +61,7 @@ public class ActionNodes {
             .category("node_category.mgmc.action.player")
             .color(NodeThemes.COLOR_NODE_ACTION)
             .input(NodePorts.EXEC, "node.mgmc.port.exec_in", NodeDefinition.PortType.EXEC, NodeThemes.COLOR_PORT_EXEC)
-            .input(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING, "")
+            .input(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID, "")
             .input(NodePorts.COMMAND, "node.mgmc.port.command", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING, "")
             .output(NodePorts.EXEC, "node.mgmc.port.exec_out", NodeDefinition.PortType.EXEC, NodeThemes.COLOR_PORT_EXEC)
             .registerExec((node, ctx) -> {

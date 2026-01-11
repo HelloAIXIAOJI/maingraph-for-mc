@@ -31,7 +31,7 @@ public class GetEntityInfoNode {
         NodeHelper.setup("get_entity_info", "node.mgmc.get_entity_info.name")
             .category("node_category.mgmc.variable.entity")
             .color(NodeThemes.COLOR_NODE_ENTITY)
-            .input(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING, "")
+            .input(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID, "")
             .output(NodePorts.NAME, "node.mgmc.port.name", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
             .output(NodePorts.TYPE, "node.mgmc.get_entity_info.port.type", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
             .output(NodePorts.REGISTRY_NAME, "node.mgmc.get_entity_info.port.registry_name", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
