@@ -12,7 +12,7 @@ import java.util.List;
 
 public class GuiNodeRenderer {
 
-    public static void render(GuiNode node, GuiGraphics guiGraphics, Font font, int mouseX, int mouseY, float panX, float panY, float zoom, List<GuiConnection> connections, GuiNode focusedNode, String focusedPort) {
+    public static void render(GuiNode node, GuiGraphics guiGraphics, Font font, int mouseX, int mouseY, float panX, float panY, float zoom, List<GuiConnection> connections, GuiNode focusedNode, String focusedPort, boolean isEditing) {
         // LOD 3: Minimal rendering for very far zoom
         if (zoom < 0.15f) {
             guiGraphics.fill((int) node.x, (int) node.y, (int) (node.x + node.width), (int) (node.y + node.height), node.color);
@@ -47,8 +47,9 @@ public class GuiNodeRenderer {
 
         // Marker Special Rendering
         if (node.definition.properties().containsKey("is_marker")) {
-            if (zoom > 0.2f) {
-                String text = node.inputValues.has(NodePorts.COMMENT) ? node.inputValues.get(NodePorts.COMMENT).getAsString() : "";
+            if (zoom > 0.2f && !isEditing) {
+                String text = node.inputValues.has(NodePorts.COMMENT) ? 
+                           node.inputValues.get(NodePorts.COMMENT).getAsString() : "";
                 if (!text.isEmpty()) {
                     int maxWidth = 250;
                     List<FormattedCharSequence> lines = font.split(Component.literal(text), maxWidth - 20);

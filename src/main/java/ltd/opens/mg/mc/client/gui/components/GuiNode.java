@@ -75,11 +75,11 @@ public class GuiNode {
         GuiNodePortManager.updateConnectedState(this, connections);
     }
 
-    public void render(GuiGraphics guiGraphics, net.minecraft.client.gui.Font font, int mouseX, int mouseY, float panX, float panY, float zoom, List<GuiConnection> connections, GuiNode focusedNode, String focusedPort) {
+    public void render(GuiGraphics guiGraphics, net.minecraft.client.gui.Font font, int mouseX, int mouseY, float panX, float panY, float zoom, List<GuiConnection> connections, GuiNode focusedNode, String focusedPort, boolean isEditing) {
         if (sizeDirty) {
             GuiNodeHelper.updateSize(this, font);
         }
-        GuiNodeRenderer.render(this, guiGraphics, font, mouseX, mouseY, panX, panY, zoom, connections, focusedNode, focusedPort);
+        GuiNodeRenderer.render(this, guiGraphics, font, mouseX, mouseY, panX, panY, zoom, connections, focusedNode, focusedPort, isEditing);
     }
 
     public boolean isDynamicPort(NodePort port) {
