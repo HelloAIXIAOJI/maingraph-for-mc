@@ -22,6 +22,7 @@ public class BlueprintConnectionHandler {
                     state.connectionStartNode = node;
                     state.connectionStartPort = node.inputs.get(i).id;
                     state.isConnectionFromInput = true;
+                    state.isAnimatingView = false; // Stop animation if user starts drawing connection
                     return true;
                 }
             }
@@ -32,6 +33,7 @@ public class BlueprintConnectionHandler {
                     state.connectionStartNode = node;
                     state.connectionStartPort = node.outputs.get(i).id;
                     state.isConnectionFromInput = false;
+                    state.isAnimatingView = false; // Stop animation if user starts drawing connection
                     return true;
                 }
             }
