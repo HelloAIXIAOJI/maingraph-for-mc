@@ -2,6 +2,7 @@ package ltd.opens.mg.mc.client.gui.blueprint;
 
 import ltd.opens.mg.mc.client.gui.blueprint.menu.*;
 import ltd.opens.mg.mc.client.gui.components.*;
+import ltd.opens.mg.mc.client.gui.blueprint.manager.MarkerSearchManager;
 import net.minecraft.client.gui.components.EditBox;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,8 +67,12 @@ public class BlueprintState {
     private static final float PAN_SMOOTHING = 0.2f;
     private static final float ZOOM_SMOOTHING = 0.15f;
 
+    public GuiNode highlightedNode = null;
+    public int highlightTimer = 0;
+
     public void tick() {
         cursorTick++;
+        if (highlightTimer > 0) highlightTimer--;
         if (isAnimatingView) {
             float dx = targetPanX - panX;
             float dy = targetPanY - panY;
@@ -91,26 +96,20 @@ public class BlueprintState {
         targetPanX = screenWidth / 2f - (node.x + node.width / 2f) * targetZoom;
         targetPanY = screenHeight / 2f - (node.y + node.height / 2f) * targetZoom;
         isAnimatingView = true;
+        highlightedNode = node;
+        highlightTimer = 40; // 2 seconds at 20 ticks
     }
 
     public void updateQuickSearchMatches() {
         quickSearchMatches.clear();
         if (quickSearchEditBox == null) return;
-        String query = quickSearchEditBox.getValue().toLowerCase();
+        String query = quickSearchEditBox.getValue();
         if (query.isEmpty()) {
             quickSearchSelectedIndex = -1;
             return;
         }
 
-        for (GuiNode node : nodes) {
-            if (node.definition.properties().containsKey("is_marker")) {
-                String comment = node.inputValues.has(ltd.opens.mg.mc.core.blueprint.NodePorts.COMMENT) ? 
-                                 node.inputValues.get(ltd.opens.mg.mc.core.blueprint.NodePorts.COMMENT).getAsString() : "";
-                if (comment.toLowerCase().contains(query)) {
-                    quickSearchMatches.add(node);
-                }
-            }
-        }
+        quickSearchMatches.addAll(MarkerSearchManager.performSearch(nodes, query));
         
         if (!quickSearchMatches.isEmpty()) {
             quickSearchSelectedIndex = 0;

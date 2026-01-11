@@ -302,6 +302,21 @@ public class BlueprintRenderer {
                 }
                 
                 guiGraphics.drawString(font, comment, x + 8, itemTop + 4, 0xFFFFFFFF, false);
+
+                // Highlight matched text
+                String query = state.quickSearchEditBox != null ? state.quickSearchEditBox.getValue().toLowerCase() : "";
+                if (!query.isEmpty() && comment.toLowerCase().contains(query)) {
+                    int startIdx = comment.toLowerCase().indexOf(query);
+                    if (startIdx >= 0) {
+                        String prefix = comment.substring(0, startIdx);
+                        String match = comment.substring(startIdx, startIdx + query.length());
+                        int prefixW = font.width(prefix);
+                        int matchW = font.width(match);
+                        
+                        // Draw highlight underline or background
+                        guiGraphics.fill(x + 8 + prefixW, itemTop + 14, x + 8 + prefixW + matchW, itemTop + 15, 0xFF55FF55);
+                    }
+                }
             }
         } else if (state.quickSearchEditBox != null && !state.quickSearchEditBox.getValue().isEmpty()) {
             // No matches hint

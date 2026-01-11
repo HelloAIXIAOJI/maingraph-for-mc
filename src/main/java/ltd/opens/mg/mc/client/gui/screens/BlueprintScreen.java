@@ -147,7 +147,8 @@ public class BlueprintScreen extends Screen {
             }
             
             node.updateConnectedState(state.connections);
-            node.render(guiGraphics, this.font, mouseX, mouseY, state.panX, state.panY, state.zoom, state.connections, state.focusedNode, state.focusedPort, state.editingMarkerNode == node);
+            int hTimer = (state.highlightedNode == node) ? state.highlightTimer : 0;
+            node.render(guiGraphics, this.font, mouseX, mouseY, state.panX, state.panY, state.zoom, state.connections, state.focusedNode, state.focusedPort, state.editingMarkerNode == node, hTimer);
         }
 
         if (state.connectionStartNode != null) {

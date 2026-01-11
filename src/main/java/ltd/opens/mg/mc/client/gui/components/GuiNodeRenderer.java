@@ -12,11 +12,20 @@ import java.util.List;
 
 public class GuiNodeRenderer {
 
-    public static void render(GuiNode node, GuiGraphics guiGraphics, Font font, int mouseX, int mouseY, float panX, float panY, float zoom, List<GuiConnection> connections, GuiNode focusedNode, String focusedPort, boolean isEditing) {
+    public static void render(GuiNode node, GuiGraphics guiGraphics, Font font, int mouseX, int mouseY, float panX, float panY, float zoom, List<GuiConnection> connections, GuiNode focusedNode, String focusedPort, boolean isEditing, int highlightTimer) {
         // LOD 3: Minimal rendering for very far zoom
         if (zoom < 0.15f) {
             guiGraphics.fill((int) node.x, (int) node.y, (int) (node.x + node.width), (int) (node.y + node.height), node.color);
             return;
+        }
+
+        // Highlight Effect
+        if (highlightTimer > 0) {
+            float alpha = Math.min(1.0f, highlightTimer / 10.0f);
+            int color = ((int)(alpha * 255) << 24) | 0xFFFFFF;
+            int expand = (int) (4 * (1.0f - alpha * 0.5f));
+            guiGraphics.renderOutline((int) node.x - expand, (int) node.y - expand, (int) node.width + expand * 2, (int) node.height + expand * 2, color);
+            guiGraphics.renderOutline((int) node.x - expand - 1, (int) node.y - expand - 1, (int) node.width + expand * 2 + 2, (int) node.height + expand * 2 + 2, color);
         }
 
         // Background
