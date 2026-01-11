@@ -4,6 +4,8 @@ import ltd.opens.mg.mc.client.gui.blueprint.BlueprintState;
 import ltd.opens.mg.mc.client.gui.blueprint.menu.*;
 import ltd.opens.mg.mc.client.gui.components.GuiNode;
 
+import java.util.List;
+
 
 import ltd.opens.mg.mc.client.gui.screens.*;
 import net.minecraft.client.gui.Font;
@@ -186,6 +188,13 @@ public class BlueprintEventHandler {
         }
     }
 
+    public boolean keyReleased(KeyEvent event, BlueprintScreen screen) {
+        if (event.key() == GLFW.GLFW_KEY_ENTER) {
+            state.isEnterDown = false;
+        }
+        return false;
+    }
+
     public boolean keyPressed(KeyEvent event, BlueprintScreen screen) {
         if (event.key() == GLFW.GLFW_KEY_M) {
             state.showMinimap = !state.showMinimap;
@@ -219,23 +228,32 @@ public class BlueprintEventHandler {
             
             if (state.quickSearchEditBox != null) {
                 if (event.key() == GLFW.GLFW_KEY_ENTER) {
-                    if (state.quickSearchSelectedIndex >= 0 && state.quickSearchSelectedIndex < state.quickSearchMatches.size()) {
-                        state.jumpToNode(state.quickSearchMatches.get(state.quickSearchSelectedIndex), screen.width, screen.height);
-                        state.showQuickSearch = false;
+                    if (state.quickSearchEditBox.getValue().isEmpty()) {
+                        state.isEnterDown = true;
+                    } else {
+                        List<GuiNode> currentList = state.quickSearchMatches;
+                        if (state.quickSearchSelectedIndex >= 0 && state.quickSearchSelectedIndex < currentList.size()) {
+                            state.jumpToNode(currentList.get(state.quickSearchSelectedIndex), screen.width, screen.height);
+                            state.showQuickSearch = false;
+                        }
                     }
                     return true;
                 }
                 
                 if (event.key() == GLFW.GLFW_KEY_UP) {
-                    if (!state.quickSearchMatches.isEmpty()) {
-                        state.quickSearchSelectedIndex = (state.quickSearchSelectedIndex - 1 + state.quickSearchMatches.size()) % state.quickSearchMatches.size();
+                    List<GuiNode> currentList = state.quickSearchEditBox.getValue().isEmpty() ? state.searchHistory : state.quickSearchMatches;
+                    if (!currentList.isEmpty()) {
+                        state.quickSearchSelectedIndex = (state.quickSearchSelectedIndex - 1 + currentList.size()) % currentList.size();
+                        state.searchConfirmProgress = 0f; // Reset on selection change
                     }
                     return true;
                 }
                 
                 if (event.key() == GLFW.GLFW_KEY_DOWN) {
-                    if (!state.quickSearchMatches.isEmpty()) {
-                        state.quickSearchSelectedIndex = (state.quickSearchSelectedIndex + 1) % state.quickSearchMatches.size();
+                    List<GuiNode> currentList = state.quickSearchEditBox.getValue().isEmpty() ? state.searchHistory : state.quickSearchMatches;
+                    if (!currentList.isEmpty()) {
+                        state.quickSearchSelectedIndex = (state.quickSearchSelectedIndex + 1) % currentList.size();
+                        state.searchConfirmProgress = 0f; // Reset on selection change
                     }
                     return true;
                 }

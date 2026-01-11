@@ -70,9 +70,42 @@ public class BlueprintState {
     public GuiNode highlightedNode = null;
     public int highlightTimer = 0;
 
-    public void tick() {
+    // Search History
+    public List<GuiNode> searchHistory = new ArrayList<>();
+    public float searchConfirmProgress = 0f; // 0 to 1
+    public int lastHistorySelectedIndex = -1;
+    public boolean isEnterDown = false;
+
+    public void addToHistory(GuiNode node) {
+        searchHistory.remove(node);
+        searchHistory.add(0, node);
+        if (searchHistory.size() > 5) {
+            searchHistory.remove(searchHistory.size() - 1);
+        }
+    }
+
+    public void tick(int screenWidth, int screenHeight) {
         cursorTick++;
         if (highlightTimer > 0) highlightTimer--;
+        
+        // Confirm progress logic (Long press Enter for history)
+        if (showQuickSearch && quickSearchEditBox != null && quickSearchEditBox.getValue().isEmpty()) {
+            if (isEnterDown && quickSearchSelectedIndex >= 0 && quickSearchSelectedIndex < searchHistory.size()) {
+                searchConfirmProgress += 0.05f; // Fill in 20 ticks (1 second)
+                if (searchConfirmProgress >= 1.0f) {
+                    searchConfirmProgress = 0f;
+                    isEnterDown = false;
+                    jumpToNode(searchHistory.get(quickSearchSelectedIndex), screenWidth, screenHeight);
+                    showQuickSearch = false;
+                }
+            } else {
+                searchConfirmProgress *= 0.8f; // Fast decay when not holding
+                if (searchConfirmProgress < 0.01f) searchConfirmProgress = 0f;
+            }
+        } else {
+            searchConfirmProgress = 0f;
+        }
+
         if (isAnimatingView) {
             float dx = targetPanX - panX;
             float dy = targetPanY - panY;
@@ -98,6 +131,7 @@ public class BlueprintState {
         isAnimatingView = true;
         highlightedNode = node;
         highlightTimer = 40; // 2 seconds at 20 ticks
+        addToHistory(node);
     }
 
     public void updateQuickSearchMatches() {
@@ -105,7 +139,8 @@ public class BlueprintState {
         if (quickSearchEditBox == null) return;
         String query = quickSearchEditBox.getValue();
         if (query.isEmpty()) {
-            quickSearchSelectedIndex = -1;
+            quickSearchSelectedIndex = searchHistory.isEmpty() ? -1 : 0;
+            searchConfirmProgress = 0f;
             return;
         }
 

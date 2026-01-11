@@ -118,7 +118,7 @@ public class BlueprintScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
-        state.tick();
+        state.tick(this.width, this.height);
         state.menu.tick();
     }
 
@@ -312,6 +312,11 @@ public class BlueprintScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         return eventHandler.keyPressed(event, this) || super.keyPressed(event);
+    }
+
+    @Override
+    public boolean keyReleased(KeyEvent event) {
+        return eventHandler.keyReleased(event, this) || super.keyReleased(event);
     }
 
     @Override

@@ -274,47 +274,64 @@ public class BlueprintRenderer {
             state.quickSearchEditBox.render(guiGraphics, 0, 0, 0);
         }
 
-        // Candidates list
-        if (!state.quickSearchMatches.isEmpty()) {
+        // Candidates list or History
+        List<GuiNode> displayList = (state.quickSearchEditBox != null && state.quickSearchEditBox.getValue().isEmpty()) ? state.searchHistory : state.quickSearchMatches;
+        
+        if (!displayList.isEmpty()) {
             int itemHeight = 18;
             int listY = y + searchH + 2;
-            int listHeight = Math.min(state.quickSearchMatches.size(), 10) * itemHeight + 6;
+            int listHeight = Math.min(displayList.size(), 10) * itemHeight + 6;
             
             // List Background
             guiGraphics.fill(x, listY, x + searchW, listY + listHeight, 0xF01A1A1A);
             guiGraphics.renderOutline(x, listY, searchW, listHeight, 0xFF555555);
             
-            for (int i = 0; i < Math.min(state.quickSearchMatches.size(), 10); i++) {
-                GuiNode node = state.quickSearchMatches.get(i);
+            for (int i = 0; i < Math.min(displayList.size(), 10); i++) {
+                GuiNode node = displayList.get(i);
                 int itemTop = listY + 3 + i * itemHeight;
+                boolean selected = i == state.quickSearchSelectedIndex;
                 
                 // Selection Highlight
-                if (i == state.quickSearchSelectedIndex) {
+                if (selected) {
                     guiGraphics.fill(x + 2, itemTop, x + searchW - 2, itemTop + itemHeight, 0x44FFFFFF);
+                    
+                    // History Confirm Progress Bar (Golden)
+                    if (state.quickSearchEditBox != null && state.quickSearchEditBox.getValue().isEmpty() && state.searchConfirmProgress > 0) {
+                        int barW = (int) ((searchW - 4) * state.searchConfirmProgress);
+                        guiGraphics.fill(x + 2, itemTop + itemHeight - 2, x + 2 + barW, itemTop + itemHeight, 0xFFFFD700);
+                    }
                 }
                 
                 String comment = node.inputValues.has(ltd.opens.mg.mc.core.blueprint.NodePorts.COMMENT) ? 
                                  node.inputValues.get(ltd.opens.mg.mc.core.blueprint.NodePorts.COMMENT).getAsString() : "Marker";
                 
-                // Truncate comment if too long
-                if (font.width(comment) > searchW - 20) {
-                    comment = font.plainSubstrByWidth(comment, searchW - 30) + "...";
+                int textOffset = 8;
+                // Draw Clock Icon for History (MC Style)
+                if (state.quickSearchEditBox != null && state.quickSearchEditBox.getValue().isEmpty()) {
+                    guiGraphics.drawString(font, "§6\u231B", x + 8, itemTop + 4, 0xFFFFFFFF, false); // Unicode hourglass as clock placeholder
+                    textOffset = 20;
                 }
                 
-                guiGraphics.drawString(font, comment, x + 8, itemTop + 4, 0xFFFFFFFF, false);
+                // Truncate comment if too long
+                int availableW = searchW - textOffset - 10;
+                if (font.width(comment) > availableW) {
+                    comment = font.plainSubstrByWidth(comment, availableW - 10) + "...";
+                }
+                
+                guiGraphics.drawString(font, comment, x + textOffset, itemTop + 4, 0xFFFFFFFF, false);
 
-                // Highlight matched text
-                String query = state.quickSearchEditBox != null ? state.quickSearchEditBox.getValue().toLowerCase() : "";
-                if (!query.isEmpty() && comment.toLowerCase().contains(query)) {
-                    int startIdx = comment.toLowerCase().indexOf(query);
-                    if (startIdx >= 0) {
-                        String prefix = comment.substring(0, startIdx);
-                        String match = comment.substring(startIdx, startIdx + query.length());
-                        int prefixW = font.width(prefix);
-                        int matchW = font.width(match);
-                        
-                        // Draw highlight underline or background
-                        guiGraphics.fill(x + 8 + prefixW, itemTop + 14, x + 8 + prefixW + matchW, itemTop + 15, 0xFF55FF55);
+                // Highlight matched text (only for non-history)
+                if (state.quickSearchEditBox != null && !state.quickSearchEditBox.getValue().isEmpty()) {
+                    String query = state.quickSearchEditBox.getValue().toLowerCase();
+                    if (comment.toLowerCase().contains(query)) {
+                        int startIdx = comment.toLowerCase().indexOf(query);
+                        if (startIdx >= 0) {
+                            String prefix = comment.substring(0, startIdx);
+                            String match = comment.substring(startIdx, startIdx + query.length());
+                            int prefixW = font.width(prefix);
+                            int matchW = font.width(match);
+                            guiGraphics.fill(x + textOffset + prefixW, itemTop + 14, x + textOffset + prefixW + matchW, itemTop + 15, 0xFF55FF55);
+                        }
                     }
                 }
             }
