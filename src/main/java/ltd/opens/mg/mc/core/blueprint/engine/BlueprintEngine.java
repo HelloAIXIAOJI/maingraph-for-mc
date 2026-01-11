@@ -53,6 +53,18 @@ public class BlueprintEngine {
             .triggerValue(triggerValue)
             .triggerExtraUuid(triggerExtraUuid);
         
+        // 自动尝试根据 UUID 获取实体，以便向后兼容 /mgrun 等命令
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            try {
+                if (triggerUuid != null && !triggerUuid.isEmpty()) {
+                    builder.triggerEntity(serverLevel.getEntity(java.util.UUID.fromString(triggerUuid)));
+                }
+                if (triggerExtraUuid != null && !triggerExtraUuid.isEmpty()) {
+                    builder.triggerExtraEntity(serverLevel.getEntity(java.util.UUID.fromString(triggerExtraUuid)));
+                }
+            } catch (Exception ignored) {}
+        }
+        
         execute(level, root, eventType, builder);
     }
 

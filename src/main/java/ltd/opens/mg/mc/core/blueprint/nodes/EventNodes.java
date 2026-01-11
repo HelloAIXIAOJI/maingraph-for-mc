@@ -34,19 +34,15 @@ public class EventNodes {
             .execOut()
             .output(NodePorts.NAME, "node.mgmc.port.name", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
             .output(NodePorts.PARAMETERS, "node.mgmc.on_mgrun.port.parameters", NodeDefinition.PortType.LIST, NodeThemes.COLOR_PORT_LIST)
-            .output(NodePorts.TRIGGER_UUID, "node.mgmc.on_mgrun.port.trigger_uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
-            .output(NodePorts.TRIGGER_NAME, "node.mgmc.on_mgrun.port.trigger_name", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
-            .output(NodePorts.TRIGGER_X, "node.mgmc.on_mgrun.port.trigger_x", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.TRIGGER_Y, "node.mgmc.on_mgrun.port.trigger_y", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.TRIGGER_Z, "node.mgmc.on_mgrun.port.trigger_z", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
+            .output(NodePorts.TRIGGER_ENTITY, "node.mgmc.port.trigger_entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
+            .output(NodePorts.TRIGGER_NAME, "node.mgmc.port.trigger_name", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
+            .output(NodePorts.XYZ, "node.mgmc.port.xyz", NodeDefinition.PortType.XYZ, NodeThemes.COLOR_PORT_XYZ)
             .registerValue((node, portId, ctx) -> switch (portId) {
                 case NodePorts.NAME -> ctx.eventName;
                 case NodePorts.PARAMETERS -> Arrays.asList(ctx.args);
-                case NodePorts.TRIGGER_UUID -> ctx.triggerUuid != null ? ctx.triggerUuid : "";
+                case NodePorts.TRIGGER_ENTITY -> ctx.triggerEntity;
                 case NodePorts.TRIGGER_NAME -> ctx.triggerName != null ? ctx.triggerName : "";
-                case NodePorts.TRIGGER_X -> ctx.triggerX;
-                case NodePorts.TRIGGER_Y -> ctx.triggerY;
-                case NodePorts.TRIGGER_Z -> ctx.triggerZ;
+                case NodePorts.XYZ -> ctx.triggerXYZ;
                 default -> null;
             });
 
@@ -55,23 +51,20 @@ public class EventNodes {
             .category("node_category.mgmc.events.player")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.X, "node.mgmc.port.x", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Y, "node.mgmc.port.y", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Z, "node.mgmc.port.z", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
+            .output(NodePorts.XYZ, "node.mgmc.port.xyz", NodeDefinition.PortType.XYZ, NodeThemes.COLOR_PORT_XYZ)
             .output(NodePorts.BLOCK_ID, "node.mgmc.port.block_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(BlockEvent.BreakEvent.class, (e, b) -> {
                 b.triggerUuid(e.getPlayer().getUUID().toString())
                  .triggerName(e.getPlayer().getName().getString())
+                 .triggerEntity(e.getPlayer())
                  .triggerX(e.getPos().getX()).triggerY(e.getPos().getY()).triggerZ(e.getPos().getZ())
                  .triggerBlockId(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(e.getState().getBlock()).toString());
             }, e -> net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(e.getState().getBlock()).toString(),
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.X -> ctx.triggerX;
-                case NodePorts.Y -> ctx.triggerY;
-                case NodePorts.Z -> ctx.triggerZ;
+                case NodePorts.XYZ -> ctx.triggerXYZ;
                 case NodePorts.BLOCK_ID -> ctx.triggerBlockId;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 default -> null;
             });
 
@@ -79,25 +72,22 @@ public class EventNodes {
             .category("node_category.mgmc.events.player")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.X, "node.mgmc.port.x", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Y, "node.mgmc.port.y", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Z, "node.mgmc.port.z", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
+            .output(NodePorts.XYZ, "node.mgmc.port.xyz", NodeDefinition.PortType.XYZ, NodeThemes.COLOR_PORT_XYZ)
             .output(NodePorts.BLOCK_ID, "node.mgmc.port.block_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(BlockEvent.EntityPlaceEvent.class, (e, b) -> {
                 if (e.getEntity() instanceof Player p) {
                     b.triggerUuid(p.getUUID().toString())
                      .triggerName(p.getName().getString())
+                     .triggerEntity(p)
                      .triggerX(e.getPos().getX()).triggerY(e.getPos().getY()).triggerZ(e.getPos().getZ())
                      .triggerBlockId(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(e.getState().getBlock()).toString());
                 }
             }, e -> net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(e.getState().getBlock()).toString(),
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.X -> ctx.triggerX;
-                case NodePorts.Y -> ctx.triggerY;
-                case NodePorts.Z -> ctx.triggerZ;
+                case NodePorts.XYZ -> ctx.triggerXYZ;
                 case NodePorts.BLOCK_ID -> ctx.triggerBlockId;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 default -> null;
             });
 
@@ -105,23 +95,20 @@ public class EventNodes {
             .category("node_category.mgmc.events.player")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.X, "node.mgmc.port.x", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Y, "node.mgmc.port.y", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Z, "node.mgmc.port.z", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
+            .output(NodePorts.XYZ, "node.mgmc.port.xyz", NodeDefinition.PortType.XYZ, NodeThemes.COLOR_PORT_XYZ)
             .output(NodePorts.BLOCK_ID, "node.mgmc.port.block_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(PlayerInteractEvent.RightClickBlock.class, (e, b) -> {
                 b.triggerUuid(e.getEntity().getUUID().toString())
                  .triggerName(e.getEntity().getName().getString())
+                 .triggerEntity(e.getEntity())
                  .triggerX(e.getPos().getX()).triggerY(e.getPos().getY()).triggerZ(e.getPos().getZ())
                  .triggerBlockId(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(e.getLevel().getBlockState(e.getPos()).getBlock()).toString());
             }, e -> net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(e.getLevel().getBlockState(e.getPos()).getBlock()).toString(),
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.X -> ctx.triggerX;
-                case NodePorts.Y -> ctx.triggerY;
-                case NodePorts.Z -> ctx.triggerZ;
+                case NodePorts.XYZ -> ctx.triggerXYZ;
                 case NodePorts.BLOCK_ID -> ctx.triggerBlockId;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 default -> null;
             });
 
@@ -129,14 +116,15 @@ public class EventNodes {
             .category("node_category.mgmc.events.player")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .output(NodePorts.NAME, "node.mgmc.port.name", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
             .registerEvent(PlayerEvent.PlayerLoggedInEvent.class, (e, b) -> {
                 b.triggerUuid(e.getEntity().getUUID().toString())
-                 .triggerName(e.getEntity().getName().getString());
+                 .triggerName(e.getEntity().getName().getString())
+                 .triggerEntity(e.getEntity());
             }, e -> BlueprintRouter.PLAYERS_ID,
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 case NodePorts.NAME -> ctx.triggerName;
                 default -> null;
             });
@@ -145,23 +133,23 @@ public class EventNodes {
             .category("node_category.mgmc.events.player")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.X, "node.mgmc.port.x", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Y, "node.mgmc.port.y", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Z, "node.mgmc.port.z", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.XYZ, "node.mgmc.port.xyz", NodeDefinition.PortType.XYZ, NodeThemes.COLOR_PORT_XYZ)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
+            .output(NodePorts.ATTACKER_ENTITY, "node.mgmc.port.attacker_entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(LivingDeathEvent.class, (e, b) -> {
                 if (e.getEntity() instanceof Player p) {
                     b.triggerUuid(p.getUUID().toString())
                      .triggerName(p.getName().getString())
+                     .triggerEntity(p)
                      .triggerX(p.getX()).triggerY(p.getY()).triggerZ(p.getZ())
-                     .triggerExtraUuid(e.getSource().getEntity() != null ? e.getSource().getEntity().getUUID().toString() : "");
+                     .triggerExtraUuid(e.getSource().getEntity() != null ? e.getSource().getEntity().getUUID().toString() : "")
+                     .triggerExtraEntity(e.getSource().getEntity());
                 }
             }, e -> e.getEntity() instanceof Player ? BlueprintRouter.PLAYERS_ID : null,
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.X -> ctx.triggerX;
-                case NodePorts.Y -> ctx.triggerY;
-                case NodePorts.Z -> ctx.triggerZ;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.XYZ -> ctx.triggerXYZ;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
+                case NodePorts.ATTACKER_ENTITY -> ctx.triggerExtraEntity;
                 default -> null;
             });
 
@@ -169,20 +157,17 @@ public class EventNodes {
             .category("node_category.mgmc.events.player")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.X, "node.mgmc.port.x", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Y, "node.mgmc.port.y", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Z, "node.mgmc.port.z", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.XYZ, "node.mgmc.port.xyz", NodeDefinition.PortType.XYZ, NodeThemes.COLOR_PORT_XYZ)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(PlayerEvent.PlayerRespawnEvent.class, (e, b) -> {
                 b.triggerUuid(e.getEntity().getUUID().toString())
                  .triggerName(e.getEntity().getName().getString())
+                 .triggerEntity(e.getEntity())
                  .triggerX(e.getEntity().getX()).triggerY(e.getEntity().getY()).triggerZ(e.getEntity().getZ());
             }, e -> BlueprintRouter.PLAYERS_ID,
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.X -> ctx.triggerX;
-                case NodePorts.Y -> ctx.triggerY;
-                case NodePorts.Z -> ctx.triggerZ;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.XYZ -> ctx.triggerXYZ;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 default -> null;
             });
 
@@ -191,20 +176,22 @@ public class EventNodes {
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
             .output(NodePorts.DAMAGE_AMOUNT, "node.mgmc.port.damage_amount", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.ATTACKER_UUID, "node.mgmc.port.attacker_uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.ATTACKER_ENTITY, "node.mgmc.port.attacker_entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(LivingIncomingDamageEvent.class, (e, b) -> {
                 if (e.getEntity() instanceof Player p) {
                     b.triggerUuid(p.getUUID().toString())
                      .triggerName(p.getName().getString())
+                     .triggerEntity(p)
                      .triggerValue(e.getAmount())
-                     .triggerExtraUuid(e.getSource().getEntity() != null ? e.getSource().getEntity().getUUID().toString() : "");
+                     .triggerExtraUuid(e.getSource().getEntity() != null ? e.getSource().getEntity().getUUID().toString() : "")
+                     .triggerExtraEntity(e.getSource().getEntity());
                 }
             }, e -> e.getEntity() instanceof Player ? BlueprintRouter.PLAYERS_ID : null,
             (node, portId, ctx) -> switch (portId) {
                 case NodePorts.DAMAGE_AMOUNT -> ctx.triggerValue;
-                case NodePorts.ATTACKER_UUID -> ctx.triggerExtraUuid;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.ATTACKER_ENTITY -> ctx.triggerExtraEntity;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 default -> null;
             });
 
@@ -213,15 +200,16 @@ public class EventNodes {
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
             .output(NodePorts.ITEM_ID, "node.mgmc.port.item_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(PlayerInteractEvent.RightClickItem.class, (e, b) -> {
                 b.triggerUuid(e.getEntity().getUUID().toString())
                  .triggerName(e.getEntity().getName().getString())
+                 .triggerEntity(e.getEntity())
                  .triggerItemId(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(e.getItemStack().getItem()).toString());
             }, e -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(e.getItemStack().getItem()).toString(),
             (node, portId, ctx) -> switch (portId) {
                 case NodePorts.ITEM_ID -> ctx.triggerItemId;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 default -> null;
             });
 
@@ -229,16 +217,18 @@ public class EventNodes {
             .category("node_category.mgmc.events.player")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.VICTIM_UUID, "node.mgmc.port.victim_uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.VICTIM_ENTITY, "node.mgmc.port.victim_entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(AttackEntityEvent.class, (e, b) -> {
                 b.triggerUuid(e.getEntity().getUUID().toString())
                  .triggerName(e.getEntity().getName().getString())
-                 .triggerExtraUuid(e.getTarget().getUUID().toString());
+                 .triggerEntity(e.getEntity())
+                 .triggerExtraUuid(e.getTarget().getUUID().toString())
+                 .triggerExtraEntity(e.getTarget());
             }, e -> BlueprintRouter.PLAYERS_ID,
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.VICTIM_UUID -> ctx.triggerExtraUuid;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.VICTIM_ENTITY -> ctx.triggerExtraEntity;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 default -> null;
             });
 
@@ -247,21 +237,21 @@ public class EventNodes {
             .category("node_category.mgmc.events.entity")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.X, "node.mgmc.port.x", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Y, "node.mgmc.port.y", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Z, "node.mgmc.port.z", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.XYZ, "node.mgmc.port.xyz", NodeDefinition.PortType.XYZ, NodeThemes.COLOR_PORT_XYZ)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
+            .output(NodePorts.ATTACKER_ENTITY, "node.mgmc.port.attacker_entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(LivingDeathEvent.class, (e, b) -> {
                 b.triggerUuid(e.getEntity().getUUID().toString())
                  .triggerName(e.getEntity().getName().getString())
+                 .triggerEntity(e.getEntity())
                  .triggerX(e.getEntity().getX()).triggerY(e.getEntity().getY()).triggerZ(e.getEntity().getZ())
-                 .triggerExtraUuid(e.getSource().getEntity() != null ? e.getSource().getEntity().getUUID().toString() : "");
+                 .triggerExtraUuid(e.getSource().getEntity() != null ? e.getSource().getEntity().getUUID().toString() : "")
+                 .triggerExtraEntity(e.getSource().getEntity());
             }, e -> net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getEntity().getType()).toString(),
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.X -> ctx.triggerX;
-                case NodePorts.Y -> ctx.triggerY;
-                case NodePorts.Z -> ctx.triggerZ;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.XYZ -> ctx.triggerXYZ;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
+                case NodePorts.ATTACKER_ENTITY -> ctx.triggerExtraEntity;
                 default -> null;
             });
 
@@ -270,18 +260,20 @@ public class EventNodes {
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
             .output(NodePorts.DAMAGE_AMOUNT, "node.mgmc.port.damage_amount", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
-            .output(NodePorts.ATTACKER_UUID, "node.mgmc.port.attacker_uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
+            .output(NodePorts.ATTACKER_ENTITY, "node.mgmc.port.attacker_entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(LivingIncomingDamageEvent.class, (e, b) -> {
                 b.triggerUuid(e.getEntity().getUUID().toString())
                  .triggerName(e.getEntity().getName().getString())
+                 .triggerEntity(e.getEntity())
                  .triggerValue(e.getAmount())
-                 .triggerExtraUuid(e.getSource().getEntity() != null ? e.getSource().getEntity().getUUID().toString() : "");
+                 .triggerExtraUuid(e.getSource().getEntity() != null ? e.getSource().getEntity().getUUID().toString() : "")
+                 .triggerExtraEntity(e.getSource().getEntity());
             }, e -> net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getEntity().getType()).toString(),
             (node, portId, ctx) -> switch (portId) {
                 case NodePorts.DAMAGE_AMOUNT -> ctx.triggerValue;
-                case NodePorts.UUID -> ctx.triggerUuid;
-                case NodePorts.ATTACKER_UUID -> ctx.triggerExtraUuid;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
+                case NodePorts.ATTACKER_ENTITY -> ctx.triggerExtraEntity;
                 default -> null;
             });
 
@@ -289,20 +281,17 @@ public class EventNodes {
             .category("node_category.mgmc.events.entity")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.X, "node.mgmc.port.x", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Y, "node.mgmc.port.y", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Z, "node.mgmc.port.z", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.XYZ, "node.mgmc.port.xyz", NodeDefinition.PortType.XYZ, NodeThemes.COLOR_PORT_XYZ)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(EntityJoinLevelEvent.class, (e, b) -> {
                 b.triggerUuid(e.getEntity().getUUID().toString())
                  .triggerName(e.getEntity().getName().getString())
+                 .triggerEntity(e.getEntity())
                  .triggerX(e.getEntity().getX()).triggerY(e.getEntity().getY()).triggerZ(e.getEntity().getZ());
             }, e -> net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getEntity().getType()).toString(),
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.X -> ctx.triggerX;
-                case NodePorts.Y -> ctx.triggerY;
-                case NodePorts.Z -> ctx.triggerZ;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.XYZ -> ctx.triggerXYZ;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 default -> null;
             });
 
@@ -311,15 +300,16 @@ public class EventNodes {
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
             .output(NodePorts.ITEM_ID, "node.mgmc.port.item_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent.Post.class, (e, b) -> {
                 b.triggerUuid(e.getPlayer().getUUID().toString())
                  .triggerName(e.getPlayer().getName().getString())
+                 .triggerEntity(e.getPlayer())
                  .triggerItemId(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(e.getItemEntity().getItem().getItem()).toString());
             }, e -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(e.getItemEntity().getItem().getItem()).toString(),
             (node, portId, ctx) -> switch (portId) {
                 case NodePorts.ITEM_ID -> ctx.triggerItemId;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 default -> null;
             });
 
@@ -327,23 +317,20 @@ public class EventNodes {
             .category("node_category.mgmc.events.player")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.X, "node.mgmc.port.x", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Y, "node.mgmc.port.y", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Z, "node.mgmc.port.z", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
+            .output(NodePorts.XYZ, "node.mgmc.port.xyz", NodeDefinition.PortType.XYZ, NodeThemes.COLOR_PORT_XYZ)
             .output(NodePorts.BLOCK_ID, "node.mgmc.port.block_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(PlayerInteractEvent.LeftClickBlock.class, (e, b) -> {
                 b.triggerUuid(e.getEntity().getUUID().toString())
                  .triggerName(e.getEntity().getName().getString())
+                 .triggerEntity(e.getEntity())
                  .triggerX(e.getPos().getX()).triggerY(e.getPos().getY()).triggerZ(e.getPos().getZ())
                  .triggerBlockId(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(e.getLevel().getBlockState(e.getPos()).getBlock()).toString());
             }, e -> net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(e.getLevel().getBlockState(e.getPos()).getBlock()).toString(),
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.X -> ctx.triggerX;
-                case NodePorts.Y -> ctx.triggerY;
-                case NodePorts.Z -> ctx.triggerZ;
+                case NodePorts.XYZ -> ctx.triggerXYZ;
                 case NodePorts.BLOCK_ID -> ctx.triggerBlockId;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 default -> null;
             });
 
@@ -351,11 +338,9 @@ public class EventNodes {
             .category("node_category.mgmc.events.player")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.X, "node.mgmc.port.x", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Y, "node.mgmc.port.y", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.Z, "node.mgmc.port.z", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
+            .output(NodePorts.XYZ, "node.mgmc.port.xyz", NodeDefinition.PortType.XYZ, NodeThemes.COLOR_PORT_XYZ)
             .output(NodePorts.SPEED, "node.mgmc.port.speed", NodeDefinition.PortType.FLOAT, NodeThemes.COLOR_PORT_FLOAT)
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(PlayerTickEvent.Post.class, (e, b) -> {
                 Player player = e.getEntity();
                 double dx = player.getX() - player.xo;
@@ -366,6 +351,7 @@ public class EventNodes {
                 if (distanceSq > 0.0001) {
                     b.triggerUuid(player.getUUID().toString())
                      .triggerName(player.getName().getString())
+                     .triggerEntity(player)
                      .triggerX(player.getX()).triggerY(player.getY()).triggerZ(player.getZ())
                      .triggerSpeed((float) Math.sqrt(distanceSq));
                 }
@@ -377,11 +363,9 @@ public class EventNodes {
                 return (dx * dx + dy * dy + dz * dz > 0.0001) ? BlueprintRouter.PLAYERS_ID : null;
             },
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.X -> ctx.triggerX;
-                case NodePorts.Y -> ctx.triggerY;
-                case NodePorts.Z -> ctx.triggerZ;
+                case NodePorts.XYZ -> ctx.triggerXYZ;
                 case NodePorts.SPEED -> ctx.triggerSpeed;
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 default -> null;
             });
 
@@ -389,14 +373,15 @@ public class EventNodes {
             .category("node_category.mgmc.events.player")
             .color(NodeThemes.COLOR_NODE_EVENT)
             .execOut()
-            .output(NodePorts.UUID, "node.mgmc.port.uuid", NodeDefinition.PortType.UUID, NodeThemes.COLOR_PORT_UUID)
+            .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .output(NodePorts.NAME, "node.mgmc.port.name", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
             .registerEvent(PlayerEvent.PlayerLoggedOutEvent.class, (e, b) -> {
                 b.triggerUuid(e.getEntity().getUUID().toString())
-                 .triggerName(e.getEntity().getName().getString());
+                 .triggerName(e.getEntity().getName().getString())
+                 .triggerEntity(e.getEntity());
             }, e -> BlueprintRouter.PLAYERS_ID,
             (node, portId, ctx) -> switch (portId) {
-                case NodePorts.UUID -> ctx.triggerUuid;
+                case NodePorts.ENTITY -> ctx.triggerEntity;
                 case NodePorts.NAME -> ctx.triggerName;
                 default -> null;
             });

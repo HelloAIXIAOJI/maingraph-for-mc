@@ -1,6 +1,8 @@
 package ltd.opens.mg.mc.core.blueprint.engine;
 
 import com.google.gson.JsonObject;
+import ltd.opens.mg.mc.core.blueprint.data.XYZ;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,14 +13,17 @@ public class NodeContext {
     public final String[] args;
     public final String triggerUuid;
     public final String triggerName;
+    public final Entity triggerEntity;
     public final double triggerX;
     public final double triggerY;
     public final double triggerZ;
+    public final XYZ triggerXYZ;
     public final double triggerSpeed;
     public final String triggerBlockId;
     public final String triggerItemId;
     public final double triggerValue;
     public final String triggerExtraUuid;
+    public final Entity triggerExtraEntity;
     public final Map<String, JsonObject> nodesMap;
     public final int formatVersion;
     public final Map<String, Object> variables = new HashMap<>();
@@ -37,23 +42,26 @@ public class NodeContext {
         runtimeData.computeIfAbsent(nodeId, k -> new HashMap<>()).put(key, value);
     }
 
-    public NodeContext(Level level, String eventName, String[] args, String triggerUuid, String triggerName, 
+    public NodeContext(Level level, String eventName, String[] args, String triggerUuid, String triggerName, Entity triggerEntity,
                        double triggerX, double triggerY, double triggerZ, double triggerSpeed,
-                       String triggerBlockId, String triggerItemId, double triggerValue, String triggerExtraUuid,
+                       String triggerBlockId, String triggerItemId, double triggerValue, String triggerExtraUuid, Entity triggerExtraEntity,
                        Map<String, JsonObject> nodesMap, int formatVersion) {
         this.level = level;
         this.eventName = eventName;
         this.args = args;
         this.triggerUuid = triggerUuid;
         this.triggerName = triggerName;
+        this.triggerEntity = triggerEntity;
         this.triggerX = triggerX;
         this.triggerY = triggerY;
         this.triggerZ = triggerZ;
+        this.triggerXYZ = new XYZ(triggerX, triggerY, triggerZ);
         this.triggerSpeed = triggerSpeed;
         this.triggerBlockId = triggerBlockId;
         this.triggerItemId = triggerItemId;
         this.triggerValue = triggerValue;
         this.triggerExtraUuid = triggerExtraUuid;
+        this.triggerExtraEntity = triggerExtraEntity;
         this.nodesMap = nodesMap;
         this.formatVersion = formatVersion;
     }
@@ -64,6 +72,7 @@ public class NodeContext {
         private String[] args = new String[0];
         private String triggerUuid = "";
         private String triggerName = "";
+        private Entity triggerEntity;
         private double triggerX;
         private double triggerY;
         private double triggerZ;
@@ -72,6 +81,7 @@ public class NodeContext {
         private String triggerItemId = "";
         private double triggerValue;
         private String triggerExtraUuid = "";
+        private Entity triggerExtraEntity;
         private Map<String, JsonObject> nodesMap = new HashMap<>();
         private int formatVersion = 1;
 
@@ -83,6 +93,7 @@ public class NodeContext {
         public Builder args(String[] args) { this.args = args; return this; }
         public Builder triggerUuid(String triggerUuid) { this.triggerUuid = triggerUuid; return this; }
         public Builder triggerName(String triggerName) { this.triggerName = triggerName; return this; }
+        public Builder triggerEntity(Entity entity) { this.triggerEntity = entity; return this; }
         public Builder triggerX(double triggerX) { this.triggerX = triggerX; return this; }
         public Builder triggerY(double triggerY) { this.triggerY = triggerY; return this; }
         public Builder triggerZ(double triggerZ) { this.triggerZ = triggerZ; return this; }
@@ -91,13 +102,14 @@ public class NodeContext {
         public Builder triggerItemId(String triggerItemId) { this.triggerItemId = triggerItemId; return this; }
         public Builder triggerValue(double triggerValue) { this.triggerValue = triggerValue; return this; }
         public Builder triggerExtraUuid(String triggerExtraUuid) { this.triggerExtraUuid = triggerExtraUuid; return this; }
+        public Builder triggerExtraEntity(Entity entity) { this.triggerExtraEntity = entity; return this; }
         public Builder nodesMap(Map<String, JsonObject> nodesMap) { this.nodesMap = nodesMap; return this; }
         public Builder formatVersion(int formatVersion) { this.formatVersion = formatVersion; return this; }
 
         public NodeContext build() {
-            return new NodeContext(level, eventName, args, triggerUuid, triggerName, 
+            return new NodeContext(level, eventName, args, triggerUuid, triggerName, triggerEntity,
                                    triggerX, triggerY, triggerZ, triggerSpeed,
-                                   triggerBlockId, triggerItemId, triggerValue, triggerExtraUuid,
+                                   triggerBlockId, triggerItemId, triggerValue, triggerExtraUuid, triggerExtraEntity,
                                    nodesMap, formatVersion);
         }
     }

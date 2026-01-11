@@ -1,5 +1,6 @@
 package ltd.opens.mg.mc.client.gui.blueprint.menu;
 
+import ltd.opens.mg.mc.client.utils.BlueprintMathHelper;
 import ltd.opens.mg.mc.client.gui.blueprint.BlueprintState;
 
 import ltd.opens.mg.mc.client.gui.components.*;
@@ -125,6 +126,15 @@ public class BlueprintMenuHandler {
                     state.menuY = mouseY;
                     return true;
                 }
+            }
+
+            // Check if right-clicked a connection
+            GuiConnection hoveredConn = BlueprintMathHelper.getHoveredConnection(worldMouseX, worldMouseY, state);
+            if (hoveredConn != null) {
+                state.pushHistory();
+                state.connections.remove(hoveredConn);
+                state.markDirty();
+                return true;
             }
             
             state.showNodeMenu = true;

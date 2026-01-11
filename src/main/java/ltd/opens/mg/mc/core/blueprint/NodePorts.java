@@ -48,9 +48,11 @@ public class NodePorts {
     
     // 实体/玩家相关
     public static final String ENTITY = "entity";
+    public static final String ENTITY_UUID = "entity_uuid";
     public static final String PLAYER = "player";
     public static final String TARGET = "target";
     public static final String POSITION = "position";
+    public static final String XYZ = "xyz";
     public static final String X = "x";
     public static final String Y = "y";
     public static final String Z = "z";
@@ -70,9 +72,18 @@ public class NodePorts {
     public static final String SPEED = "speed";
     public static final String BLOCK_ID = "block_id";
     public static final String DAMAGE_AMOUNT = "damage_amount";
+    public static final String HEAL_AMOUNT = "heal_amount";
     public static final String ATTACKER_UUID = "attacker_uuid";
     public static final String VICTIM_UUID = "victim_uuid";
+    public static final String ATTACKER_ENTITY = "attacker_entity";
+    public static final String VICTIM_ENTITY = "victim_entity";
+    public static final String TRIGGER_ENTITY = "trigger_entity";
+    public static final String TRIGGER_EXTRA_ENTITY = "trigger_extra_entity";
     public static final String ITEM_ID = "item_id";
+    public static final String DURATION = "duration";
+    public static final String AMPLIFIER = "amplifier";
+    public static final String SHOW_PARTICLES = "show_particles";
+    public static final String SECONDS = "seconds";
     
     // 实体属性
     public static final String TYPE = "type";

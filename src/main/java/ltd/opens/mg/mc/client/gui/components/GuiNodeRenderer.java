@@ -176,6 +176,7 @@ public class GuiNodeRenderer {
             case BOOLEAN: return 0xFF5555FF;
             case LIST: return 0xFFFFFF55;
             case UUID: return 0xFFFF55FF;
+            case ENTITY: return 0xFF55FFFF;
             case ENUM: return 0xFFFFAA00;
             case ANY: return 0xFFAAAAAA;
             default: return port.color;
