@@ -84,10 +84,9 @@ public class BlueprintRenderer {
         float cp2x = x2 - dist;
         float cp2y = y2;
 
-        // Dynamic segments based on distance and zoom
+        // Dynamic segments based on length and zoom (LOD)
         float pixelDist = (float) Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
-        int maxSegments = zoom > 0.4f ? 30 : 12;
-        int segments = Math.max(4, Math.min(maxSegments, (int)(pixelDist / (zoom > 0.4f ? 10 : 25))));
+        int segments = (int) Math.max(4, Math.min(40, pixelDist * zoom / 7.0f));
         
         float lastX = x1;
         float lastY = y1;
