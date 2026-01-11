@@ -4,10 +4,37 @@ package ltd.opens.mg.mc.client.gui.blueprint.manager;
 import ltd.opens.mg.mc.core.blueprint.NodeDefinition;
 import ltd.opens.mg.mc.core.blueprint.NodeRegistry;
 import net.minecraft.network.chat.Component;
+import net.neoforged.fml.ModList;
 
 import java.util.*;
 
 public class BlueprintSearchManager {
+    private static boolean jechLoaded = false;
+    private static boolean jechChecked = false;
+
+    private static boolean isJechLoaded() {
+        if (!jechChecked) {
+            jechLoaded = ModList.get() != null && ModList.get().isLoaded("jecharacters");
+            jechChecked = true;
+        }
+        return jechLoaded;
+    }
+
+    private static boolean matches(String text, String query) {
+        if (text == null || query == null) return false;
+        if (text.toLowerCase().contains(query.toLowerCase())) return true;
+        
+        if (isJechLoaded()) {
+            try {
+                // Use reflection to call JECH to avoid compile-time dependency issues
+                Class<?> matchClass = Class.forName("me.towdium.jecharacters.utils.Match");
+                java.lang.reflect.Method containsMethod = matchClass.getMethod("contains", String.class, CharSequence.class);
+                return (boolean) containsMethod.invoke(null, text, query);
+            } catch (Throwable ignored) {}
+        }
+        return false;
+    }
+
     public static class SearchResult {
         public final NodeDefinition node;
         public final String category;
@@ -145,7 +172,7 @@ public class BlueprintSearchManager {
                             } catch (Exception ignored) {
                             }
                         } else {
-                            matched = pId.contains(portQuery) || pName.contains(portQuery) ||
+                            matched = pId.contains(portQuery) || matches(pName, portQuery) ||
                                     pRawName.contains(portQuery) || pType.contains(portQuery);
                         }
 
@@ -181,15 +208,15 @@ public class BlueprintSearchManager {
                 }
             } else {
                 // Normal matching
-                if (locName.contains(term) || rawName.contains(term)) {
+                if (matches(locName, term) || rawName.contains(term)) {
                     totalScore += 10;
                     termMatched = true;
                 }
-                if (locCat.contains(term) || rawCat.contains(term)) {
+                if (matches(locCat, term) || rawCat.contains(term)) {
                     totalScore += 5;
                     termMatched = true;
                 }
-                if (locPath.contains(term) || rawPath.contains(term)) {
+                if (matches(locPath, term) || rawPath.contains(term)) {
                     totalScore += 8;
                     termMatched = true;
                 }

@@ -48,6 +48,62 @@ public class BlueprintState {
     public boolean readOnly = false;
     public long version = 0;
 
+    // Undo/Redo history
+    private final java.util.Deque<String> undoStack = new java.util.ArrayDeque<>();
+    private final java.util.Deque<String> redoStack = new java.util.ArrayDeque<>();
+    private static final int MAX_HISTORY = 50;
+    public String historyPendingState = null;
+
+    public void pushHistory() {
+        String currentState = ltd.opens.mg.mc.client.gui.blueprint.io.BlueprintIO.serialize(nodes, connections);
+        pushHistory(currentState);
+    }
+
+    public void pushHistory(String stateJson) {
+        if (stateJson != null) {
+            // Only push if different from last (optional optimization)
+            if (!undoStack.isEmpty() && undoStack.peek().equals(stateJson)) return;
+            
+            undoStack.push(stateJson);
+            if (undoStack.size() > MAX_HISTORY) {
+                undoStack.removeLast();
+            }
+            redoStack.clear();
+        }
+    }
+
+    public void undo() {
+        if (undoStack.isEmpty()) return;
+        
+        String currentState = ltd.opens.mg.mc.client.gui.blueprint.io.BlueprintIO.serialize(nodes, connections);
+        if (currentState != null) {
+            redoStack.push(currentState);
+        }
+        
+        String previousState = undoStack.pop();
+        applyState(previousState);
+        showNotification(net.minecraft.network.chat.Component.translatable("gui.mgmc.notification.undo").getString());
+    }
+
+    public void redo() {
+        if (redoStack.isEmpty()) return;
+        
+        String currentState = ltd.opens.mg.mc.client.gui.blueprint.io.BlueprintIO.serialize(nodes, connections);
+        if (currentState != null) {
+            undoStack.push(currentState);
+        }
+        
+        String nextState = redoStack.pop();
+        applyState(nextState);
+        showNotification(net.minecraft.network.chat.Component.translatable("gui.mgmc.notification.redo").getString());
+    }
+
+    private void applyState(String json) {
+        selectedNodes.clear();
+        ltd.opens.mg.mc.client.gui.blueprint.io.BlueprintIO.loadFromString(json, nodes, connections, true);
+        markDirty();
+    }
+
     public void showNotification(String message) {
         this.notificationMessage = message;
         this.notificationTimer = 60; // 3 seconds at 20fps, but Minecraft render is faster, let's use ticks or simple counter
@@ -59,6 +115,7 @@ public class BlueprintState {
 
     public void autoLayout() {
         if (nodes.isEmpty()) return;
+        pushHistory();
 
         // 1. 分类节点与预处理
         java.util.List<GuiNode> execNodes = new java.util.ArrayList<>();

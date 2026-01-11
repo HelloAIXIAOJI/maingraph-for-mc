@@ -62,6 +62,7 @@ public class BlueprintConnectionHandler {
                         float[] pos = node.getPortPosition(i, true);
                         if (Math.abs(worldMouseX - pos[0]) < 10 && Math.abs(worldMouseY - pos[1]) < 10) {
                             if (startPort != null && canConnect(startPort.type, targetPort.type)) {
+                                state.pushHistory();
                                 // Remove existing connections to this input if it's not EXEC
                                 if (targetPort.type != NodeDefinition.PortType.EXEC) {
                                     state.connections.removeIf(c -> c.to == node && c.toPort.equals(targetPort.id));
@@ -84,6 +85,7 @@ public class BlueprintConnectionHandler {
                         float[] pos = node.getPortPosition(i, false);
                         if (Math.abs(worldMouseX - pos[0]) < 10 && Math.abs(worldMouseY - pos[1]) < 10) {
                             if (startPort != null && canConnect(startPort.type, targetPort.type)) {
+                                state.pushHistory();
                                 // Remove existing connections to the start input if it's not EXEC
                                 if (startPort.type != NodeDefinition.PortType.EXEC) {
                                     state.connections.removeIf(c -> c.to == state.connectionStartNode && c.toPort.equals(startPort.id));

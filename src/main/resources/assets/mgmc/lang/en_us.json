@@ -43,6 +43,8 @@
   "gui.mgmc.blueprint_editor.instructions": "Right click to add. Drag ports to connect. DEL to delete. Box select supported.",
   "gui.mgmc.notification.copied": "Copied %d nodes",
   "gui.mgmc.notification.pasted": "Pasted %d nodes",
+  "gui.mgmc.notification.undo": "Undo Successful",
+  "gui.mgmc.notification.redo": "Redo Successful",
   "gui.mgmc.blueprint_editor.modal.select_type": "Select Type",
   "gui.mgmc.blueprint_editor.modal.enter_value": "Enter %s",
   "command.mgmc.mgrun.blueprint_not_found": "Blueprint '%s' not found.",

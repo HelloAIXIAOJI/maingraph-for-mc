@@ -23,6 +23,7 @@ public class BlueprintMenuHandler {
             BlueprintMenu.ContextMenuResult result = state.menu.onClickContextMenu(event, state.menuX, state.menuY);
             if (result == BlueprintMenu.ContextMenuResult.DELETE) {
                 if (state.contextMenuNode != null) {
+                    state.pushHistory();
                     if (state.focusedNode == state.contextMenuNode) {
                         state.focusedNode = null;
                         state.focusedPort = null;
@@ -37,6 +38,7 @@ public class BlueprintMenuHandler {
                 return true;
             } else if (result == BlueprintMenu.ContextMenuResult.BREAK_LINKS) {
                 if (state.contextMenuNode != null) {
+                    state.pushHistory();
                     final GuiNode finalNode = state.contextMenuNode;
                     state.connections.removeIf(c -> c.from == finalNode || c.to == finalNode);
                     state.markDirty();
@@ -69,6 +71,7 @@ public class BlueprintMenuHandler {
     }
 
     private void createNodeAtMenu(NodeDefinition def) {
+        state.pushHistory();
         float worldX = (float) ((state.menuX - state.panX) / state.zoom);
         float worldY = (float) ((state.menuY - state.panY) / state.zoom);
         GuiNode node = new GuiNode(def, worldX, worldY);
