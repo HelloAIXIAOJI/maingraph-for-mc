@@ -287,8 +287,14 @@ public class ItemComponentEditorScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // 不调用 super，避免默认的 dirt 背景纹理/暗化层覆盖在面板之上（表现为“背景模糊”）
+    }
+
+    @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        guiGraphics.fill(0, 0, this.width, this.height, 0x88000000);
+        // 不透明整体背景，遮住背后的世界，避免透出与模糊
+        guiGraphics.fill(0, 0, this.width, this.height, 0xFF0E0E0E);
         guiGraphics.fill(sx, sy, sx + sw, sy + sh, 0xEE1A1A1A);
         guiGraphics.renderOutline(sx, sy, sw, sh, 0xFFFFFFFF);
         guiGraphics.drawString(font, Component.translatable("gui.mgmc.components.title"), sx + 10, sy + 10, 0xFFFFFFFF, false);
