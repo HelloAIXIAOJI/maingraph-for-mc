@@ -147,6 +147,21 @@ public class BlueprintNodeHandler {
     }
 
     private void handleInputBoxClick(GuiNode node, GuiNode.NodePort port, BlueprintScreen screen) {
+        if (port.type == NodeDefinition.PortType.COMPONENTS) {
+            JsonElement val = node.inputValues.get(port.id);
+            String initial = val != null ? val.getAsString() : (port.defaultValue != null ? port.defaultValue.toString() : "{}");
+            Minecraft.getInstance().setScreen(new ItemComponentEditorScreen(
+                screen,
+                initial,
+                (result) -> {
+                    state.pushHistory();
+                    node.inputValues.addProperty(port.id, result);
+                    state.markDirty();
+                },
+                "enchantments"
+            ));
+            return;
+        }
         if (port.type == NodeDefinition.PortType.BOOLEAN) {
             JsonElement val = node.inputValues.get(port.id);
             boolean current = val != null ? val.getAsBoolean() : (port.defaultValue instanceof Boolean ? (Boolean) port.defaultValue : false);

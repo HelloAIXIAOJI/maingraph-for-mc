@@ -144,4 +144,7 @@ public class NodePorts {
     public static final String MAX_DAMAGE = "max_damage";
     public static final String IS_FOOD = "is_food";
     public static final String IS_BLOCK_ITEM = "is_block_item";
+
+    // 物品数据组件（可视化组件编辑器）
+    public static final String COMPONENTS = "components";
 }

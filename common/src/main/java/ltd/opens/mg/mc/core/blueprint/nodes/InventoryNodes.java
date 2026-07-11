@@ -3,6 +3,7 @@ package ltd.opens.mg.mc.core.blueprint.nodes;
 import ltd.opens.mg.mc.core.blueprint.NodeDefinition;
 import ltd.opens.mg.mc.core.blueprint.NodeHelper;
 import ltd.opens.mg.mc.core.blueprint.NodePorts;
+import ltd.opens.mg.mc.core.blueprint.ItemComponentsCodec;
 import ltd.opens.mg.mc.core.blueprint.NodeThemes;
 import ltd.opens.mg.mc.core.blueprint.engine.NodeLogicRegistry;
 import ltd.opens.mg.mc.core.blueprint.engine.TypeConverter;
@@ -38,12 +39,14 @@ public class InventoryNodes {
             .input(NodePorts.ITEM_ID, "node.mgmc.port.item_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING, "minecraft:stone")
             .input(NodePorts.COUNT, "node.mgmc.port.count", NodeDefinition.PortType.INT, NodeThemes.COLOR_PORT_INT, 1)
             .input(NodePorts.NBT, "node.mgmc.port.nbt", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING, "{}")
+            .input(NodePorts.COMPONENTS, "node.mgmc.port.components", NodeDefinition.PortType.COMPONENTS, 0xFFE0A000, "{}")
             .output(NodePorts.EXEC, "node.mgmc.port.exec_out", NodeDefinition.PortType.EXEC, NodeThemes.COLOR_PORT_EXEC)
             .registerExec((node, ctx) -> {
                 Object entityObj = NodeLogicRegistry.evaluateInput(node, NodePorts.PLAYER, ctx);
                 String itemId = TypeConverter.toString(NodeLogicRegistry.evaluateInput(node, NodePorts.ITEM_ID, ctx), ctx);
                 int count = TypeConverter.toInt(NodeLogicRegistry.evaluateInput(node, NodePorts.COUNT, ctx));
                 String nbtStr = TypeConverter.toString(NodeLogicRegistry.evaluateInput(node, NodePorts.NBT, ctx), ctx);
+                String componentsStr = TypeConverter.toString(NodeLogicRegistry.evaluateInput(node, NodePorts.COMPONENTS, ctx), ctx);
 
                 if (entityObj instanceof ServerPlayer player) {
                     try {
@@ -59,6 +62,9 @@ public class InventoryNodes {
                                 } catch (Exception e) {
                                     MaingraphforMC.LOGGER.error("Error parsing NBT in give_item node: " + node.get("id"), e);
                                 }
+                            }
+                            if (componentsStr != null && !componentsStr.isBlank() && !componentsStr.equals("{}")) {
+                                ItemComponentsCodec.apply(stack, componentsStr, player.getServer().registryAccess());
                             }
                             player.getInventory().add(stack);
                         }

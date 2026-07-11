@@ -8,11 +8,13 @@ if "%1"=="clean" goto clean
 if "%1"=="build" goto build
 
 :fabric
+call gradlew.bat :fabric:build
 echo Starting Fabric client...
 call gradlew.bat :fabric:runClient
 goto end
 
 :neoforge
+call gradlew.bat :neoforge:build
 echo Starting NeoForge client...
 call gradlew.bat :neoforge:runClient
 goto end

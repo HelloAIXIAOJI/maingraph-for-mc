@@ -120,6 +120,6 @@ public record NodeDefinition(
     public record PortDefinition(String id, String displayName, PortType type, int color, boolean hasInput, Object defaultValue, String[] options, String customTypeId) {}
 
     public enum PortType {
-        EXEC, STRING, FLOAT, INT, BOOLEAN, OBJECT, LIST, UUID, ENUM, ANY, XYZ, ENTITY
+        EXEC, STRING, FLOAT, INT, BOOLEAN, OBJECT, LIST, UUID, ENUM, ANY, XYZ, ENTITY, COMPONENTS
     }
 }
