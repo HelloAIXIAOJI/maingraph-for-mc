@@ -17,6 +17,7 @@ public class NeoForgeEvents {
     // 此时再从 ItemEntity 读取会得到 air。Pre 与 Post 在同一线程上同步、紧邻触发，
     // 用 ThreadLocal 暂存即可保证两端语义一致。
     private static final ThreadLocal<String> PICKUP_ITEM_ID = new ThreadLocal<>();
+    private static final ThreadLocal<ItemStack> PICKUP_ITEM_STACK = new ThreadLocal<>();
 
     public static void init() {
         // 左键点击方块事件（NeoForge使用PlayerInteractEvent.LeftClickBlock）
@@ -42,6 +43,7 @@ public class NeoForgeEvents {
             PICKUP_ITEM_ID.set(stack.isEmpty()
                 ? "minecraft:air"
                 : BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
+            PICKUP_ITEM_STACK.set(stack.copy());
         });
 
         // Post：物品可能已被并入背包，使用 Pre 阶段捕获的 ID
@@ -54,9 +56,14 @@ public class NeoForgeEvents {
             PICKUP_ITEM_ID.remove();
             if (itemId == null) itemId = "minecraft:air";
 
+            ItemStack stack = PICKUP_ITEM_STACK.get();
+            PICKUP_ITEM_STACK.remove();
+            if (stack == null) stack = ItemStack.EMPTY;
+
             EventDispatcher.dispatch(MGMCEventType.ITEM_PICKUP, MGMCEventContext.builder(level)
                 .player(player)
                 .entity(player)
+                .item(stack)
                 .itemId(itemId)
                 .build());
         });

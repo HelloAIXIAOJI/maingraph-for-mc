@@ -6,6 +6,7 @@ import ltd.opens.mg.mc.core.blueprint.NodeHelper;
 import ltd.opens.mg.mc.core.blueprint.NodePorts;
 import ltd.opens.mg.mc.core.blueprint.NodeThemes;
 import ltd.opens.mg.mc.core.blueprint.events.MGMCEventType;
+import ltd.opens.mg.mc.core.blueprint.ItemComponentsCodec;
 import ltd.opens.mg.mc.core.blueprint.engine.NodeContext;
 import ltd.opens.mg.mc.core.blueprint.engine.NodeLogicRegistry;
 import ltd.opens.mg.mc.core.blueprint.routing.BlueprintRouter;
@@ -300,6 +301,7 @@ public class EventNodes {
             .property("web_url", "http://zhcn-docs.mc.maingraph.nb6.ltd/nodes/events/player/on_item_pickup")
             .execOut()
             .output(NodePorts.ITEM_ID, "node.mgmc.port.item_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
+            .output(NodePorts.COMPONENTS, "node.mgmc.port.components", NodeDefinition.PortType.COMPONENTS, 0xFFE0A000)
             .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(MGMCEventType.ITEM_PICKUP, (e, b) -> {
                 if (e.getPlayer() != null) {
@@ -310,10 +312,14 @@ public class EventNodes {
                 if (e.getItemId() != null) {
                     b.triggerItemId(e.getItemId());
                 }
+                if (e.getItem() != null) {
+                    b.triggerItem(e.getItem());
+                }
             }, e -> e.getItemId() != null ? e.getItemId() : "",
             (node, portId, ctx) -> switch (portId) {
                 case NodePorts.ITEM_ID -> ctx.triggerItemId;
                 case NodePorts.ENTITY -> ctx.triggerEntity;
+                case NodePorts.COMPONENTS -> ctx.triggerItem != null ? ItemComponentsCodec.serialize(ctx.triggerItem, ctx.level.registryAccess()) : "{}";
                 default -> null;
             });
 
@@ -352,6 +358,7 @@ public class EventNodes {
             .property("web_url", "http://zhcn-docs.mc.maingraph.nb6.ltd/nodes/events/player/on_use_item")
             .execOut()
             .output(NodePorts.ITEM_ID, "node.mgmc.port.item_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
+            .output(NodePorts.COMPONENTS, "node.mgmc.port.components", NodeDefinition.PortType.COMPONENTS, 0xFFE0A000)
             .output(NodePorts.ENTITY, "node.mgmc.port.entity", NodeDefinition.PortType.ENTITY, NodeThemes.COLOR_PORT_ENTITY)
             .registerEvent(MGMCEventType.ITEM_USE, (e, b) -> {
                 if (e.getPlayer() != null) {
@@ -361,11 +368,13 @@ public class EventNodes {
                 }
                 if (e.getItem() != null) {
                     b.triggerItemId(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(e.getItem().getItem()).toString());
+                    b.triggerItem(e.getItem());
                 }
             }, e -> e.getItem() != null ? net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(e.getItem().getItem()).toString() : "",
             (node, portId, ctx) -> switch (portId) {
                 case NodePorts.ITEM_ID -> ctx.triggerItemId;
                 case NodePorts.ENTITY -> ctx.triggerEntity;
+                case NodePorts.COMPONENTS -> ctx.triggerItem != null ? ItemComponentsCodec.serialize(ctx.triggerItem, ctx.level.registryAccess()) : "{}";
                 default -> null;
             });
 

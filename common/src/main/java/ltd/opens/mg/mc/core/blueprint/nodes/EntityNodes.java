@@ -94,6 +94,7 @@ public class EntityNodes {
             .output(NodePorts.ITEM_ID, "node.mgmc.port.item_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
             .output(NodePorts.COUNT, "node.mgmc.port.count", NodeDefinition.PortType.INT, NodeThemes.COLOR_PORT_INT)
             .output(NodePorts.NBT, "node.mgmc.port.nbt", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
+            .output(NodePorts.COMPONENTS, "node.mgmc.port.components", NodeDefinition.PortType.COMPONENTS, 0xFFE0A000)
             .registerValue((node, portId, ctx) -> {
                 Object entityObj = NodeLogicRegistry.evaluateInput(node, NodePorts.ENTITY, ctx);
                 String slotName = TypeConverter.toString(NodeLogicRegistry.evaluateInput(node, NodePorts.EQUIPMENT_SLOT, ctx), ctx);
@@ -108,11 +109,15 @@ public class EntityNodes {
                              CustomData data = stack.get(DataComponents.CUSTOM_DATA);
                              return data != null ? data.getUnsafe().toString() : "{}";
                         }
+                        if (portId.equals(NodePorts.COMPONENTS)) {
+                             return ItemComponentsCodec.serialize(stack, ctx.level.registryAccess());
+                        }
                     }
                 }
                 
                 if (portId.equals(NodePorts.ITEM_ID)) return "minecraft:air";
                 if (portId.equals(NodePorts.COUNT)) return 0;
+                if (portId.equals(NodePorts.COMPONENTS)) return "{}";
                 return "{}";
             });
 

@@ -44,6 +44,7 @@ public abstract class ItemEntityPickupMixin {
             MGMCEventContext.builder(level)
                 .player(player)
                 .entity(player)
+                .item(stack.copy())
                 .itemId(itemId)
                 .build());
     }

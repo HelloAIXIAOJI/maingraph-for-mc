@@ -207,6 +207,7 @@ public class InventoryNodes {
             .output(NodePorts.ITEM_ID, "node.mgmc.port.item_id", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
             .output(NodePorts.COUNT, "node.mgmc.port.count", NodeDefinition.PortType.INT, NodeThemes.COLOR_PORT_INT)
             .output(NodePorts.NBT, "node.mgmc.port.nbt", NodeDefinition.PortType.STRING, NodeThemes.COLOR_PORT_STRING)
+            .output(NodePorts.COMPONENTS, "node.mgmc.port.components", NodeDefinition.PortType.COMPONENTS, 0xFFE0A000)
             .registerValue((node, port, ctx) -> {
                 Object entityObj = NodeLogicRegistry.evaluateInput(node, NodePorts.PLAYER, ctx);
                 int index = TypeConverter.toInt(NodeLogicRegistry.evaluateInput(node, NodePorts.INDEX, ctx));
@@ -221,6 +222,9 @@ public class InventoryNodes {
                                  CustomData data = stack.get(DataComponents.CUSTOM_DATA);
                                  return data != null ? data.getUnsafe().toString() : "{}";
                             }
+                            if (port.equals(NodePorts.COMPONENTS)) {
+                                 return ItemComponentsCodec.serialize(stack, player.getServer().registryAccess());
+                            }
                         }
                     } catch (Exception e) {
                         MaingraphforMC.LOGGER.error("Error in get_inventory_item node: " + node.get("id"), e);
@@ -230,6 +234,7 @@ public class InventoryNodes {
                 if (port.equals(NodePorts.ITEM_ID)) return "minecraft:air";
                 if (port.equals(NodePorts.COUNT)) return 0;
                 if (port.equals(NodePorts.NBT)) return "{}";
+                if (port.equals(NodePorts.COMPONENTS)) return "{}";
                 return null;
             });
     }

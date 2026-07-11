@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.mojang.serialization.JsonOps;
 import ltd.opens.mg.mc.MaingraphforMC;
 import net.minecraft.core.Holder;
@@ -65,6 +66,83 @@ public final class ItemComponentsCodec {
         } catch (Exception e) {
             MaingraphforMC.LOGGER.error("Failed to apply item components: " + json, e);
         }
+    }
+
+    /**
+     * 将物品栈的组件提取为 JSON 字符串，供 {@code COMPONENTS} 输出端口使用。
+     * 仅提取本编辑器支持的组件，格式与 {@link #apply(ItemStack, String, RegistryAccess)} 兼容（可往返）。
+     */
+    public static String serialize(ItemStack stack, RegistryAccess registryAccess) {
+        JsonObject root = new JsonObject();
+        if (stack == null || stack.isEmpty()) {
+            return root.toString();
+        }
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, registryAccess);
+
+        ItemEnchantments stored = stack.get(DataComponents.STORED_ENCHANTMENTS);
+        if (stored != null && !stored.isEmpty()) {
+            root.add(JSON_KEY_ENCHANTMENTS, serializeEnchantments(stored));
+            root.addProperty(JSON_KEY_STORED, true);
+        } else {
+            ItemEnchantments ench = stack.get(DataComponents.ENCHANTMENTS);
+            if (ench != null && !ench.isEmpty()) {
+                root.add(JSON_KEY_ENCHANTMENTS, serializeEnchantments(ench));
+            }
+        }
+
+        Component name = stack.get(DataComponents.CUSTOM_NAME);
+        if (name != null) {
+            root.addProperty(JSON_KEY_CUSTOM_NAME, componentToJsonString(name, ops));
+        }
+
+        ItemLore lore = stack.get(DataComponents.LORE);
+        if (lore != null && !lore.lines().isEmpty()) {
+            JsonArray loreArr = new JsonArray();
+            for (Component line : lore.lines()) {
+                loreArr.add(new JsonPrimitive(componentToJsonString(line, ops)));
+            }
+            root.add(JSON_KEY_LORE, loreArr);
+        }
+
+        CustomModelData cmd = stack.get(DataComponents.CUSTOM_MODEL_DATA);
+        if (cmd != null && cmd.value() != 0) {
+            root.addProperty(JSON_KEY_CUSTOM_MODEL_DATA, cmd.value());
+        }
+
+        ItemAttributeModifiers am = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);
+        if (am != null && !am.modifiers().isEmpty()) {
+            JsonArray attrArr = new JsonArray();
+            for (ItemAttributeModifiers.Entry e : am.modifiers()) {
+                JsonObject o = new JsonObject();
+                e.attribute().unwrapKey().ifPresent(k -> o.addProperty("attribute", k.location().toString()));
+                o.addProperty("slot", e.slot().getSerializedName());
+                AttributeModifier m = e.modifier();
+                o.addProperty("operation", m.operation().ordinal());
+                o.addProperty("amount", m.amount());
+                attrArr.add(o);
+            }
+            root.add(JSON_KEY_ATTRIBUTE_MODIFIERS, attrArr);
+        }
+
+        return root.toString();
+    }
+
+    private static JsonArray serializeEnchantments(ItemEnchantments ench) {
+        JsonArray arr = new JsonArray();
+        for (Holder<Enchantment> h : ench.keySet()) {
+            int lvl = ench.getLevel(h);
+            h.unwrapKey().ifPresent(k -> {
+                JsonObject o = new JsonObject();
+                o.addProperty("id", k.location().toString());
+                o.addProperty("lvl", lvl);
+                arr.add(o);
+            });
+        }
+        return arr;
+    }
+
+    private static String componentToJsonString(Component c, RegistryOps<JsonElement> ops) {
+        return ComponentSerialization.CODEC.encodeStart(ops, c).result().orElse(new JsonObject()).toString();
     }
 
     private static void applyEnchantments(ItemStack stack, JsonObject root, RegistryAccess access) {
