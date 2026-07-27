@@ -24,6 +24,16 @@ public class MGMCEventContext {
     @Nullable private final XYZ xyz;
     private final float speed;
 
+    // 维度切换 / 菜单 / 成就 / 聊天 / 指令 / 爆炸
+    @Nullable private final String dimensionFrom;
+    @Nullable private final String dimensionTo;
+    @Nullable private final String dimensionId;
+    @Nullable private final String advancementId;
+    @Nullable private final String menuType;
+    @Nullable private final String message;
+    @Nullable private final String command;
+    @Nullable private final XYZ explosionPos;
+
     // For MGRUN
     @Nullable private final String eventName;
     @Nullable private final Object[] args;
@@ -32,6 +42,9 @@ public class MGMCEventContext {
                             @Nullable BlockPos pos, @Nullable net.minecraft.world.level.block.state.BlockState blockState,
                             @Nullable ItemStack item, @Nullable String itemId, @Nullable DamageSource damageSource, float amount,
                             @Nullable XYZ xyz, float speed,
+                            @Nullable String dimensionFrom, @Nullable String dimensionTo, @Nullable String dimensionId,
+                            @Nullable String advancementId, @Nullable String menuType, @Nullable String message,
+                            @Nullable String command, @Nullable XYZ explosionPos,
                             @Nullable String eventName, @Nullable Object[] args) {
         this.level = level;
         this.entity = entity;
@@ -45,6 +58,14 @@ public class MGMCEventContext {
         this.amount = amount;
         this.xyz = xyz;
         this.speed = speed;
+        this.dimensionFrom = dimensionFrom;
+        this.dimensionTo = dimensionTo;
+        this.dimensionId = dimensionId;
+        this.advancementId = advancementId;
+        this.menuType = menuType;
+        this.message = message;
+        this.command = command;
+        this.explosionPos = explosionPos;
         this.eventName = eventName;
         this.args = args;
     }
@@ -61,6 +82,14 @@ public class MGMCEventContext {
     public float getAmount() { return amount; }
     @Nullable public XYZ getXyz() { return xyz; }
     public float getSpeed() { return speed; }
+    @Nullable public String getDimensionFrom() { return dimensionFrom; }
+    @Nullable public String getDimensionTo() { return dimensionTo; }
+    @Nullable public String getDimensionId() { return dimensionId; }
+    @Nullable public String getAdvancementId() { return advancementId; }
+    @Nullable public String getMenuType() { return menuType; }
+    @Nullable public String getMessage() { return message; }
+    @Nullable public String getCommand() { return command; }
+    @Nullable public XYZ getExplosionPos() { return explosionPos; }
     @Nullable public String getEventName() { return eventName; }
     @Nullable public Object[] getArgs() { return args; }
 
@@ -81,6 +110,14 @@ public class MGMCEventContext {
         private float amount;
         private XYZ xyz;
         private float speed;
+        private String dimensionFrom;
+        private String dimensionTo;
+        private String dimensionId;
+        private String advancementId;
+        private String menuType;
+        private String message;
+        private String command;
+        private XYZ explosionPos;
         private String eventName;
         private Object[] args;
 
@@ -99,11 +136,19 @@ public class MGMCEventContext {
         public Builder amount(float amount) { this.amount = amount; return this; }
         public Builder xyz(XYZ xyz) { this.xyz = xyz; return this; }
         public Builder speed(float speed) { this.speed = speed; return this; }
+        public Builder dimensionFrom(String v) { this.dimensionFrom = v; return this; }
+        public Builder dimensionTo(String v) { this.dimensionTo = v; return this; }
+        public Builder dimensionId(String v) { this.dimensionId = v; return this; }
+        public Builder advancementId(String v) { this.advancementId = v; return this; }
+        public Builder menuType(String v) { this.menuType = v; return this; }
+        public Builder message(String v) { this.message = v; return this; }
+        public Builder command(String v) { this.command = v; return this; }
+        public Builder explosionPos(XYZ v) { this.explosionPos = v; return this; }
         public Builder eventName(String eventName) { this.eventName = eventName; return this; }
         public Builder args(Object[] args) { this.args = args; return this; }
 
         public MGMCEventContext build() {
-            return new MGMCEventContext(level, entity, player, targetEntity, pos, blockState, item, itemId, damageSource, amount, xyz, speed, eventName, args);
+            return new MGMCEventContext(level, entity, player, targetEntity, pos, blockState, item, itemId, damageSource, amount, xyz, speed, dimensionFrom, dimensionTo, dimensionId, advancementId, menuType, message, command, explosionPos, eventName, args);
         }
     }
 }

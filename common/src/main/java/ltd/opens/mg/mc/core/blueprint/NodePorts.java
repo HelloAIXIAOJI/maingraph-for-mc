@@ -147,4 +147,13 @@ public class NodePorts {
 
     // 物品数据组件（可视化组件编辑器）
     public static final String COMPONENTS = "components";
+
+    // 事件新增端口
+    public static final String FROM_DIMENSION = "from_dimension";
+    public static final String TO_DIMENSION = "to_dimension";
+    public static final String DIMENSION_ID = "dimension_id";
+    public static final String ADVANCEMENT_ID = "advancement_id";
+    public static final String MENU_TYPE = "menu_type";
+    public static final String TAMER = "tamer";
+    public static final String TARGET_ENTITY = "target_entity";
 }

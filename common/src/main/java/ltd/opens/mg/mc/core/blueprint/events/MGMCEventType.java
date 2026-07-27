@@ -57,6 +57,27 @@ public class MGMCEventType {
     public static final MGMCEventType ITEM_PICKUP = new MGMCEventType("item_pickup");
     public static final MGMCEventType ITEM_USE = new MGMCEventType("item_use");
 
+    // 服务器 / 世界生命周期
+    public static final MGMCEventType SERVER_START = new MGMCEventType("server_start");
+    public static final MGMCEventType SERVER_STOP = new MGMCEventType("server_stop");
+    public static final MGMCEventType LEVEL_LOAD = new MGMCEventType("level_load");
+
+    // 玩家补充
+    public static final MGMCEventType PLAYER_CRAFT = new MGMCEventType("player_craft");
+    public static final MGMCEventType PLAYER_SMELT = new MGMCEventType("player_smelt");
+    public static final MGMCEventType PLAYER_DROP = new MGMCEventType("player_drop_item");
+    public static final MGMCEventType PLAYER_CHANGE_DIMENSION = new MGMCEventType("player_change_dimension");
+    public static final MGMCEventType PLAYER_ADVANCEMENT = new MGMCEventType("player_advancement");
+    public static final MGMCEventType PLAYER_OPEN_MENU = new MGMCEventType("player_open_menu");
+    public static final MGMCEventType PLAYER_CLOSE_MENU = new MGMCEventType("player_close_menu");
+    public static final MGMCEventType PLAYER_CHAT = new MGMCEventType("player_chat");
+    public static final MGMCEventType COMMAND_PERFORM = new MGMCEventType("command_perform");
+
+    // 实体补充
+    public static final MGMCEventType ENTITY_TAME = new MGMCEventType("entity_tame");
+    public static final MGMCEventType INTERACT_ENTITY = new MGMCEventType("interact_entity");
+    public static final MGMCEventType EXPLOSION = new MGMCEventType("explosion");
+
     public static final MGMCEventType BLUEPRINT_CALLED = new MGMCEventType("blueprint_called");
     public static final MGMCEventType MGRUN = new MGMCEventType("mgrun");
 }

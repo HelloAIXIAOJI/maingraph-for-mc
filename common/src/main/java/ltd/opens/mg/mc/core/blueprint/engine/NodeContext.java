@@ -29,6 +29,14 @@ public class NodeContext {
     public final double triggerValue;
     public final String triggerExtraUuid;
     public final Entity triggerExtraEntity;
+    public final String triggerDimensionFrom;
+    public final String triggerDimensionTo;
+    public final String triggerDimensionId;
+    public final String triggerAdvancementId;
+    public final String triggerMenuType;
+    public final String triggerMessage;
+    public final String triggerCommand;
+    public final XYZ triggerExplosionPos;
     public final Map<String, JsonObject> nodesMap;
     public final int formatVersion;
     public final Map<String, Object> properties;
@@ -56,6 +64,8 @@ public class NodeContext {
     public NodeContext(Level level, String eventName, String[] args, String triggerUuid, String triggerName, Entity triggerEntity,
                        double triggerX, double triggerY, double triggerZ, double triggerSpeed,
                        String triggerBlockId, String triggerItemId, ItemStack triggerItem, double triggerValue, String triggerExtraUuid, Entity triggerExtraEntity,
+                       String triggerDimensionFrom, String triggerDimensionTo, String triggerDimensionId, String triggerAdvancementId,
+                       String triggerMenuType, String triggerMessage, String triggerCommand, XYZ triggerExplosionPos,
                        Map<String, JsonObject> nodesMap, int formatVersion, Map<String, Object> properties, NodeContext parentContext) {
         this.level = level;
         this.eventName = eventName;
@@ -74,6 +84,14 @@ public class NodeContext {
         this.triggerValue = triggerValue;
         this.triggerExtraUuid = triggerExtraUuid;
         this.triggerExtraEntity = triggerExtraEntity;
+        this.triggerDimensionFrom = triggerDimensionFrom;
+        this.triggerDimensionTo = triggerDimensionTo;
+        this.triggerDimensionId = triggerDimensionId;
+        this.triggerAdvancementId = triggerAdvancementId;
+        this.triggerMenuType = triggerMenuType;
+        this.triggerMessage = triggerMessage;
+        this.triggerCommand = triggerCommand;
+        this.triggerExplosionPos = triggerExplosionPos;
         this.nodesMap = nodesMap;
         this.formatVersion = formatVersion;
         this.properties = properties != null ? properties : new HashMap<>();
@@ -83,9 +101,14 @@ public class NodeContext {
     public NodeContext(Level level, String eventName, String[] args, String triggerUuid, String triggerName, Entity triggerEntity,
                        double triggerX, double triggerY, double triggerZ, double triggerSpeed,
                        String triggerBlockId, String triggerItemId, ItemStack triggerItem, double triggerValue, String triggerExtraUuid, Entity triggerExtraEntity,
+                       String triggerDimensionFrom, String triggerDimensionTo, String triggerDimensionId, String triggerAdvancementId,
+                       String triggerMenuType, String triggerMessage, String triggerCommand, XYZ triggerExplosionPos,
                        Map<String, JsonObject> nodesMap, int formatVersion) {
         this(level, eventName, args, triggerUuid, triggerName, triggerEntity, triggerX, triggerY, triggerZ, triggerSpeed,
-             triggerBlockId, triggerItemId, triggerItem, triggerValue, triggerExtraUuid, triggerExtraEntity, nodesMap, formatVersion, new HashMap<>(), null);
+             triggerBlockId, triggerItemId, triggerItem, triggerValue, triggerExtraUuid, triggerExtraEntity,
+             triggerDimensionFrom, triggerDimensionTo, triggerDimensionId, triggerAdvancementId,
+             triggerMenuType, triggerMessage, triggerCommand, triggerExplosionPos,
+             nodesMap, formatVersion, new HashMap<>(), null);
     }
 
     public static class Builder {
@@ -105,6 +128,14 @@ public class NodeContext {
         private double triggerValue;
         private String triggerExtraUuid = "";
         private Entity triggerExtraEntity;
+        private String triggerDimensionFrom = "";
+        private String triggerDimensionTo = "";
+        private String triggerDimensionId = "";
+        private String triggerAdvancementId = "";
+        private String triggerMenuType = "";
+        private String triggerMessage = "";
+        private String triggerCommand = "";
+        private XYZ triggerExplosionPos;
         private Map<String, JsonObject> nodesMap = new HashMap<>();
         private int formatVersion = 1;
         private String blueprintName = "";
@@ -140,6 +171,14 @@ public class NodeContext {
         public Builder triggerValue(double triggerValue) { this.triggerValue = triggerValue; return this; }
         public Builder triggerExtraUuid(String triggerExtraUuid) { this.triggerExtraUuid = triggerExtraUuid; return this; }
         public Builder triggerExtraEntity(Entity entity) { this.triggerExtraEntity = entity; return this; }
+        public Builder triggerDimensionFrom(String v) { this.triggerDimensionFrom = v; return this; }
+        public Builder triggerDimensionTo(String v) { this.triggerDimensionTo = v; return this; }
+        public Builder triggerDimensionId(String v) { this.triggerDimensionId = v; return this; }
+        public Builder triggerAdvancementId(String v) { this.triggerAdvancementId = v; return this; }
+        public Builder triggerMenuType(String v) { this.triggerMenuType = v; return this; }
+        public Builder triggerMessage(String v) { this.triggerMessage = v; return this; }
+        public Builder triggerCommand(String v) { this.triggerCommand = v; return this; }
+        public Builder triggerExplosionPos(XYZ v) { this.triggerExplosionPos = v; return this; }
         public Builder nodesMap(Map<String, JsonObject> nodesMap) { this.nodesMap = nodesMap; return this; }
         public Builder formatVersion(int formatVersion) { this.formatVersion = formatVersion; return this; }
 
@@ -151,7 +190,9 @@ public class NodeContext {
         public NodeContext build() {
             NodeContext ctx = new NodeContext(level, eventName, args, triggerUuid, triggerName, triggerEntity, 
                                  triggerX, triggerY, triggerZ, triggerSpeed, 
-                                 triggerBlockId, triggerItemId, triggerItem, triggerValue, triggerExtraUuid, triggerExtraEntity, 
+                                 triggerBlockId, triggerItemId, triggerItem, triggerValue, triggerExtraUuid, triggerExtraEntity,
+                                 triggerDimensionFrom, triggerDimensionTo, triggerDimensionId, triggerAdvancementId,
+                                 triggerMenuType, triggerMessage, triggerCommand, triggerExplosionPos,
                                  nodesMap, formatVersion, properties, parentContext);
             ctx.currentBlueprintName = blueprintName;
             return ctx;
