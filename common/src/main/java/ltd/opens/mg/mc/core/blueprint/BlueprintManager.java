@@ -42,9 +42,12 @@ public class BlueprintManager {
     }
 
     public void addLog(String blueprintName, String nodeId, String level, String message) {
-        logCache.add(0, new LogEntry(blueprintName, nodeId, level, message, System.currentTimeMillis()));
-        while (logCache.size() > MAX_LOG_SIZE) {
-            logCache.remove(logCache.size() - 1);
+        // 复合操作需整体加锁，否则并发下 size()/remove() 之间可能越界或短暂超限
+        synchronized (logCache) {
+            logCache.add(0, new LogEntry(blueprintName, nodeId, level, message, System.currentTimeMillis()));
+            while (logCache.size() > MAX_LOG_SIZE) {
+                logCache.remove(logCache.size() - 1);
+            }
         }
     }
 
@@ -58,8 +61,11 @@ public class BlueprintManager {
 
     public void clearCaches() {
         blueprintCache.clear();
-        allBlueprintsCache.clear();
-        lastAllBlueprintsRefresh = 0;
+        // 与 getAllBlueprints() 的同步读写保持一致，避免并发迭代/清空数据竞争
+        synchronized (allBlueprintsCache) {
+            allBlueprintsCache.clear();
+            lastAllBlueprintsRefresh = 0;
+        }
     }
 
     private static record CachedBlueprint(JsonObject json, long lastModified, long version) {}
