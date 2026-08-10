@@ -47,8 +47,8 @@ public class NodeContext {
     public volatile String lastTriggeredPin;
     public volatile String currentBlueprintName = "";
     
-    // 用于子蓝图调用的返回数据（可被挂起任务跨线程访问，使用同步列表）
-    public final java.util.List<Object> returnList = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+    // 用于子蓝图调用的返回数据
+    public final java.util.List<Object> returnList = new java.util.ArrayList<>();
     public final NodeContext parentContext;
 
     public Object getRuntimeData(String nodeId, String key, Object defaultValue) {

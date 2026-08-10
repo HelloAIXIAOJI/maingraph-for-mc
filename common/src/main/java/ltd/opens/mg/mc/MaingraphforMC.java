@@ -29,11 +29,10 @@ public class MaingraphforMC {
     public static final String MODID = "mgmc";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    // volatile 保证跨线程可见性（如 IO 线程与主线程之间）
-    private static volatile BlueprintManager serverManager;
-    private static volatile GlobalVariableManager globalVariableManager;
-    private static volatile EntityVariableManager entityVariableManager;
-    private static volatile BlueprintRouter clientRouter;
+    private static BlueprintManager serverManager;
+    private static GlobalVariableManager globalVariableManager;
+    private static EntityVariableManager entityVariableManager;
+    private static BlueprintRouter clientRouter;
 
     public static void init() {
         Config.init();

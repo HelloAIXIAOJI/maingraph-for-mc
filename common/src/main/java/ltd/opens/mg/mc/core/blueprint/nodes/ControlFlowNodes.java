@@ -336,11 +336,8 @@ public class ControlFlowNodes {
             .registerExec((node, ctx) -> {
                 Object resultObj = NodeLogicRegistry.evaluateInput(node, NodePorts.LIST, ctx);
                 if (resultObj instanceof List) {
-                    // 复合操作需整体同步，避免与 sub_blueprint 的并发读取冲突
-                    synchronized (ctx.returnList) {
-                        ctx.returnList.clear();
-                        ctx.returnList.addAll((List<Object>) resultObj);
-                    }
+                    ctx.returnList.clear();
+                    ctx.returnList.addAll((List<Object>) resultObj);
                 }
             });
     }
