@@ -10,6 +10,8 @@ import ltd.opens.mg.mc.client.gui.screens.BlueprintMappingScreen;
 import ltd.opens.mg.mc.client.gui.screens.BlueprintWorkbenchScreen;
 import ltd.opens.mg.mc.network.payloads.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.apache.logging.log4j.LogManager;
@@ -24,6 +26,19 @@ public class BlueprintNetworkHandler {
         private static boolean hasPermission(ServerPlayer player) {
             if (player.level().getServer() == null) return false;
             return player.level().getServer().getProfilePermissions(player.getGameProfile()) >= 2;
+        }
+
+        /**
+         * 仅在服务端主线程发送网络包；玩家已断开或通道异常时静默失败。
+         */
+        private static void sendToPlayerSafe(ServerPlayer player, CustomPacketPayload payload) {
+            if (player.connection != null) {
+                try {
+                    MGMCNetwork.sendToPlayer(player, payload);
+                } catch (Exception e) {
+                    LOGGER.debug("Failed to send payload to player {}: {}", player.getName().getString(), e.toString());
+                }
+            }
         }
 
         private static java.util.List<String> getBlueprintNames(ServerLevel level, boolean force) {
@@ -86,61 +101,88 @@ public class BlueprintNetworkHandler {
         }
 
         public static void handleSave(final SaveBlueprintPayload payload, final NetworkManager.PacketContext context) {
-            if (context.getPlayer() instanceof ServerPlayer player) {
-                if (!hasPermission(player)) {
-                    MGMCNetwork.sendToPlayer(player, new SaveResultPayload(false, "You do not have permission to save blueprints.", 0));
-                    return;
+            context.queue(() -> {
+                if (context.getPlayer() instanceof ServerPlayer player) {
+                    if (!hasPermission(player)) {
+                        sendToPlayerSafe(player, new SaveResultPayload(false, "You do not have permission to save blueprints.", 0));
+                        return;
+                    }
+                    var manager = MaingraphforMC.getServerManager();
+                    if (manager == null) return;
+                    ServerLevel level = (ServerLevel) player.level();
+                    manager.saveBlueprintAsync(level, payload.name(), payload.data(), payload.expectedVersion())
+                            .thenAccept(result -> {
+                                // IO 线程完成，切回服务端主线程向玩家发包
+                                MinecraftServer server = player.server;
+                                if (server != null) {
+                                    server.execute(() -> sendToPlayerSafe(player, new SaveResultPayload(result.success(), result.message(), result.newVersion())));
+                                }
+                            });
                 }
-                var manager = MaingraphforMC.getServerManager();
-                if (manager == null) return;
-                manager.saveBlueprintAsync(
-                        (ServerLevel) player.level(),
-                        payload.name(),
-                        payload.data(),
-                        payload.expectedVersion()
-                ).thenAccept(result -> {
-                    MGMCNetwork.sendToPlayer(player, new SaveResultPayload(result.success(), result.message(), result.newVersion()));
-                });
-            }
+            });
         }
 
         public static void handleDelete(final DeleteBlueprintPayload payload, final NetworkManager.PacketContext context) {
-            if (context.getPlayer() instanceof ServerPlayer player) {
-                if (!hasPermission(player)) return;
-                var manager = MaingraphforMC.getServerManager();
-                if (manager == null) return;
-                manager.deleteBlueprintAsync((ServerLevel) player.level(), payload.name()).thenAccept(success -> {
-                    if (success) {
-                        MGMCNetwork.sendToPlayer(player, new ResponseBlueprintListPayload(getBlueprintNames((ServerLevel) player.level(), true)));
-                    }
-                });
-            }
+            context.queue(() -> {
+                if (context.getPlayer() instanceof ServerPlayer player) {
+                    if (!hasPermission(player)) return;
+                    var manager = MaingraphforMC.getServerManager();
+                    if (manager == null) return;
+                    ServerLevel level = (ServerLevel) player.level();
+                    manager.deleteBlueprintAsync(level, payload.name()).thenAccept(success -> {
+                        MinecraftServer server = player.server;
+                        if (server != null) {
+                            server.execute(() -> {
+                                if (success) {
+                                    sendToPlayerSafe(player, new ResponseBlueprintListPayload(getBlueprintNames(level, true)));
+                                }
+                            });
+                        }
+                    });
+                }
+            });
         }
 
         public static void handleRename(final RenameBlueprintPayload payload, final NetworkManager.PacketContext context) {
-            if (context.getPlayer() instanceof ServerPlayer player) {
-                if (!hasPermission(player)) return;
-                var manager = MaingraphforMC.getServerManager();
-                if (manager == null) return;
-                manager.renameBlueprintAsync((ServerLevel) player.level(), payload.oldName(), payload.newName()).thenAccept(success -> {
-                    if (success) {
-                        MGMCNetwork.sendToPlayer(player, new ResponseBlueprintListPayload(getBlueprintNames((ServerLevel) player.level(), true)));
-                    }
-                });
-            }
+            context.queue(() -> {
+                if (context.getPlayer() instanceof ServerPlayer player) {
+                    if (!hasPermission(player)) return;
+                    var manager = MaingraphforMC.getServerManager();
+                    if (manager == null) return;
+                    ServerLevel level = (ServerLevel) player.level();
+                    manager.renameBlueprintAsync(level, payload.oldName(), payload.newName()).thenAccept(success -> {
+                        MinecraftServer server = player.server;
+                        if (server != null) {
+                            server.execute(() -> {
+                                if (success) {
+                                    sendToPlayerSafe(player, new ResponseBlueprintListPayload(getBlueprintNames(level, true)));
+                                }
+                            });
+                        }
+                    });
+                }
+            });
         }
 
         public static void handleDuplicate(final DuplicateBlueprintPayload payload, final NetworkManager.PacketContext context) {
-            if (context.getPlayer() instanceof ServerPlayer player) {
-                if (!hasPermission(player)) return;
-                var manager = MaingraphforMC.getServerManager();
-                if (manager == null) return;
-                manager.duplicateBlueprintAsync((ServerLevel) player.level(), payload.sourceName(), payload.targetName()).thenAccept(success -> {
-                    if (success) {
-                        MGMCNetwork.sendToPlayer(player, new ResponseBlueprintListPayload(getBlueprintNames((ServerLevel) player.level(), true)));
-                    }
-                });
-            }
+            context.queue(() -> {
+                if (context.getPlayer() instanceof ServerPlayer player) {
+                    if (!hasPermission(player)) return;
+                    var manager = MaingraphforMC.getServerManager();
+                    if (manager == null) return;
+                    ServerLevel level = (ServerLevel) player.level();
+                    manager.duplicateBlueprintAsync(level, payload.sourceName(), payload.targetName()).thenAccept(success -> {
+                        MinecraftServer server = player.server;
+                        if (server != null) {
+                            server.execute(() -> {
+                                if (success) {
+                                    sendToPlayerSafe(player, new ResponseBlueprintListPayload(getBlueprintNames(level, true)));
+                                }
+                            });
+                        }
+                    });
+                }
+            });
         }
 
         public static void handleRequestMappings(final RequestMappingsPayload payload, final NetworkManager.PacketContext context) {
@@ -160,9 +202,14 @@ public class BlueprintNetworkHandler {
                     if (!hasPermission(player)) return;
                     var manager = MaingraphforMC.getServerManager();
                     if (manager == null) return;
-                    manager.getRouter().updateAllMappings((ServerLevel) player.level(), payload.mappings());
-                    // 广播更新？目前先简单回复
-                    MGMCNetwork.sendToPlayer(player, new ResponseMappingsPayload(manager.getRouter().getFullRoutingTable((ServerLevel) player.level())));
+                    ServerLevel level = (ServerLevel) player.level();
+                    // 路由表更新含文件写入，放到 IO 线程执行，避免阻塞服务端主线程
+                    manager.updateMappingsAsync(level, payload.mappings()).thenAccept(ignored -> {
+                        MinecraftServer server = player.server;
+                        if (server != null) {
+                            server.execute(() -> sendToPlayerSafe(player, new ResponseMappingsPayload(manager.getRouter().getFullRoutingTable(level))));
+                        }
+                    });
                 }
             });
         }
@@ -222,24 +269,30 @@ public class BlueprintNetworkHandler {
                     if (!hasPermission(player)) return;
                     var manager = MaingraphforMC.getServerManager();
                     if (manager == null) return;
+                    ServerLevel level = (ServerLevel) player.level();
                     
                     // 1. 保存蓝图逻辑
-                    manager.saveBlueprintAsync((ServerLevel) player.level(), payload.name(), payload.data(), -1).thenAccept(result -> {
+                    manager.saveBlueprintAsync(level, payload.name(), payload.data(), -1).thenAccept(result -> {
                         if (result.success()) {
-                            // 2. 合并映射
+                            // 2. 合并映射（含文件写入与缓存清理，内部容器均线程安全，可在 IO 线程执行）
                             var router = manager.getRouter();
-                            java.util.Map<String, java.util.Set<String>> currentMappings = new java.util.HashMap<>(router.getFullRoutingTable((ServerLevel) player.level()));
+                            java.util.Map<String, java.util.Set<String>> currentMappings = new java.util.HashMap<>(router.getFullRoutingTable(level));
                             
                             payload.mappings().forEach((id, blueprints) -> {
                                 java.util.Set<String> set = currentMappings.computeIfAbsent(id, k -> new java.util.HashSet<>());
                                 set.addAll(blueprints);
                             });
                             
-                            router.updateAllMappings((ServerLevel) player.level(), currentMappings);
+                            router.updateAllMappings(level, currentMappings);
                             
-                            // 3. 通知列表刷新
-                            MGMCNetwork.sendToPlayer(player, new ResponseBlueprintListPayload(getBlueprintNames((ServerLevel) player.level(), true)));
-                            MGMCNetwork.sendToPlayer(player, new ResponseMappingsPayload(router.getFullRoutingTable((ServerLevel) player.level())));
+                            // 3. 通知列表刷新（切回服务端主线程）
+                            MinecraftServer server = player.server;
+                            if (server != null) {
+                                server.execute(() -> {
+                                    sendToPlayerSafe(player, new ResponseBlueprintListPayload(getBlueprintNames(level, true)));
+                                    sendToPlayerSafe(player, new ResponseMappingsPayload(router.getFullRoutingTable(level)));
+                                });
+                            }
                         }
                     });
                 }

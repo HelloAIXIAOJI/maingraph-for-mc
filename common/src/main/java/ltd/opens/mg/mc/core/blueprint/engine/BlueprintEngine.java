@@ -8,14 +8,17 @@ import ltd.opens.mg.mc.MaingraphforMC;
 import net.minecraft.world.level.Level;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class BlueprintEngine {
 
     private static final ThreadLocal<Integer> RECURSION_DEPTH = ThreadLocal.withInitial(() -> 0);
     
-    // 缓存蓝图的索引信息，使用 WeakHashMap 防止内存泄漏
-    private static final Map<JsonObject, Map<String, List<JsonObject>>> EVENT_INDEX_CACHE = Collections.synchronizedMap(new WeakHashMap<>());
-    private static final Map<JsonObject, Map<String, JsonObject>> NODE_MAP_CACHE = Collections.synchronizedMap(new WeakHashMap<>());
+    // 缓存蓝图的索引信息。
+    // 注意：key (JsonObject) 会被 BLUEPRINT_SOURCE_CACHE 以强引用长期持有，WeakHashMap 实际无法回收这些条目，
+    // 反而会在锁内做全表 expunge 扫描；故改用 ConcurrentHashMap 提供原子 computeIfAbsent 与并发安全。
+    private static final Map<JsonObject, Map<String, List<JsonObject>>> EVENT_INDEX_CACHE = new ConcurrentHashMap<>();
+    private static final Map<JsonObject, Map<String, JsonObject>> NODE_MAP_CACHE = new ConcurrentHashMap<>();
     
     // 缓存解析后的 JsonObject，避免重复解析
     private static final Map<String, CachedBlueprint> BLUEPRINT_SOURCE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
