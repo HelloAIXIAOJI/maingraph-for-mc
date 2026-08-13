@@ -16,7 +16,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class BlueprintManager {
     private static final Logger LOGGER = LogManager.getLogger();
@@ -150,22 +149,31 @@ public class BlueprintManager {
                 long lastModified = Files.getLastModifiedTime(dataFile).toMillis();
                 CachedBlueprint cached = blueprintCache.get(fileName);
                 
-                // 如果缓存不存在或文件已更新，则重新加载
+                // 如果缓存不存在或文件已更新，则重新加载。
+                // 使用 per-key 原子 compute 替代全局 synchronized：
+                // 1) 主线程与 IO 线程不再因不同文件互相阻塞；
+                // 2) 并发下若缓存已被其他线程更新，直接复用新值，避免重复读盘。
                 if (cached == null || lastModified > cached.lastModified) {
-                    synchronized (this) { // 简单同步防止并发重复读取同一文件
-                        // 双重检查
-                        cached = blueprintCache.get(fileName);
-                        if (cached == null || lastModified > cached.lastModified) {
-                            String json = Files.readString(dataFile);
+                    final Path file = dataFile;
+                    final long mtime = lastModified;
+                    cached = blueprintCache.compute(fileName, (key, current) -> {
+                        if (current != null && current.lastModified >= mtime) {
+                            return current;
+                        }
+                        try {
+                            String json = Files.readString(file);
                             JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
                             long version = 0;
                             if (obj.has("_version") && obj.get("_version").isJsonPrimitive() && obj.get("_version").getAsJsonPrimitive().isNumber()) {
                                 version = obj.get("_version").getAsLong();
                             }
-                            cached = new CachedBlueprint(obj, lastModified, version);
-                            blueprintCache.put(fileName, cached);
+                            return new CachedBlueprint(obj, mtime, version);
+                        } catch (IOException e) {
+                            // 读取失败时保留旧缓存，避免把异常传播给调用方
+                            LOGGER.error("Failed to read blueprint: " + name, e);
+                            return current;
                         }
-                    }
+                    });
                 }
                 return cached.json;
             }
@@ -315,14 +323,6 @@ public class BlueprintManager {
         }, IO_EXECUTOR);
     }
 
-    public SaveResult saveBlueprint(ServerLevel level, String name, String data, long expectedVersion) {
-        try {
-            return saveBlueprintAsync(level, name, data, expectedVersion).get(5, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            return new SaveResult(false, "Save timeout or error: " + e.getMessage(), -1);
-        }
-    }
-
     public record SaveResult(boolean success, String message, long newVersion) {}
 
     public Collection<JsonObject> getAllBlueprints(ServerLevel level) {
@@ -388,5 +388,13 @@ public class BlueprintManager {
             }
         }
         return result;
+    }
+
+    /**
+     * 在 IO 线程执行路由表更新（含文件写入），避免阻塞服务端主线程。
+     * 内部容器（路由表 AtomicReference、缓存 ConcurrentHashMap 等）均线程安全。
+     */
+    public CompletableFuture<Void> updateMappingsAsync(ServerLevel level, Map<String, Set<String>> newMappings) {
+        return CompletableFuture.runAsync(() -> router.updateAllMappings(level, newMappings), IO_EXECUTOR);
     }
 }

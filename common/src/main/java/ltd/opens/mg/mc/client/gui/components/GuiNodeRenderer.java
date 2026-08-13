@@ -161,6 +161,15 @@ public class GuiNodeRenderer {
                             renderText = font.plainSubstrByWidth(renderText, (int)inputWidth - 15, true) + "..";
                         }
                         guiGraphics.drawString(font, renderText, (int)inputX + 2, (int)inputY + 1, 0xFFCCCCCC, false);
+                    } else if (port.type == NodeDefinition.PortType.COMPONENTS) {
+                        boolean isFocused = focusedNode == node && focusedPort != null && focusedPort.equals(port.id);
+                        guiGraphics.renderOutline((int)inputX, (int)inputY, (int)inputWidth, (int)inputHeight, isFocused ? 0xFFFFFFFF : 0xFFE0A000);
+                        Component cmpLabel = Component.translatable("gui.mgmc.port.components.edit");
+                        String label = cmpLabel.getString();
+                        if (font.width(label) > inputWidth - 2) {
+                            label = font.plainSubstrByWidth(label, (int)inputWidth - 4, true) + "..";
+                        }
+                        guiGraphics.drawString(font, label, (int)inputX + 2, (int)inputY + 1, 0xFFE0A000, false);
                     } else {
                         boolean isFocused = focusedNode == node && focusedPort != null && focusedPort.equals(port.id);
                         guiGraphics.renderOutline((int)inputX, (int)inputY, (int)inputWidth, (int)inputHeight, isFocused ? 0xFFFFFFFF : 0x33FFFFFF);
@@ -209,6 +218,7 @@ public class GuiNodeRenderer {
             case ENTITY: return 0xFF55FFFF;
             case ENUM: return 0xFFFFAA00;
             case ANY: return 0xFFAAAAAA;
+            case COMPONENTS: return 0xFFE0A000;
             default: return port.color;
         }
     }

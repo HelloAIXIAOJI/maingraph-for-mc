@@ -70,7 +70,14 @@ public class TickScheduler {
         for (SuspendedTask task : toFire) {
             try {
                 MaingraphforMC.LOGGER.debug("Resuming suspended blueprint task");
-                NodeLogicRegistry.triggerExec(task.node, task.pinId, task.context);
+                NodeContext ctx = task.context;
+                // 延迟期间触发实体可能已被移除/死亡，跳过执行避免对失效实体操作
+                net.minecraft.world.entity.Entity trigger = ctx.triggerEntity;
+                if (trigger != null && !trigger.isAlive()) {
+                    MaingraphforMC.LOGGER.debug("Skipping suspended task: trigger entity is no longer alive");
+                    continue;
+                }
+                NodeLogicRegistry.triggerExec(task.node, task.pinId, ctx);
             } catch (Exception e) {
                 MaingraphforMC.LOGGER.error("Error resuming suspended blueprint task", e);
             }
